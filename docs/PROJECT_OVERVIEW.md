@@ -8,8 +8,8 @@
 | **项目英文全称** | FlowMind: A Real-Time Collaborative Visual AI Workflow Orchestration and Training Platform |
 | **项目代号 / 仓库包名** | `flowmind` (`com.flowmind.platform`) |
 | **开发周期** | 3 周（第 1 周：需求与概要设计；第 2 周：详细设计与编码实现；第 3 周：系统测试、文档与答辩） |
-| **团队规模与成员** | 4 人（组长：**顾峰鸣**；组员：**张誉诚**、**郝唐鑫**、**李俊豪**） |
-| **已接入 GitHub 成员账号** | `lijunhao`（李俊豪）、`killo.linli`（**[待确认]** 对应张誉诚或郝唐鑫，其余两位成员 GitHub 账号 **[待确认]**） |
+| **团队规模与成员** | 4 人（组长/管理员：**顾峰鸣**；组员：**张誉诚**、**郝唐鑫**、**李俊豪**；指导教师：**李甜**） |
+| **GitHub 成员与专属分支** | `Alcrex`（顾峰鸣 - `main` 主干维护）、`killo.linli`（张誉诚 - 分支 `killo.linli`）、`changdi-in`（郝唐鑫 - 分支 `changdi-in`）、`lijunhao`（李俊豪 - 分支 `lijunhao`） |
 | **主要编程智能体** | OpenAI Codex（严格依据根目录 `AGENTS.md` 与 `docs/` 全套开发文档执行开发） |
 
 ---

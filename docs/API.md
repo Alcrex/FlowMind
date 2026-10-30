@@ -97,7 +97,7 @@
         "username": "gufengming",
         "realName": "顾峰鸣",
         "roleType": "STUDENT",
-        "deptClass": "计算机科学与技术2301班",
+        "deptClass": "计科1班",
         "tokenQuota": 46800,
         "tokenUsed": 3200
       }
@@ -176,10 +176,10 @@
     "data": {
       "kpi": { "totalUsers": 128, "totalWorkflows": 86, "totalExecutions": 1420, "totalTokensUsed": 684200 },
       "sankeyData": {
-        "nodes": [{"name": "计科2301班"}, {"name": "STUDENT"}, {"name": "DEEPSEEK"}],
-        "links": [{"source": "计科2301班", "target": "STUDENT", "value": 320000}, {"source": "STUDENT", "target": "DEEPSEEK", "value": 320000}]
+        "nodes": [{"name": "计科1班"}, {"name": "STUDENT"}, {"name": "DEEPSEEK"}],
+        "links": [{"source": "计科1班", "target": "STUDENT", "value": 320000}, {"source": "STUDENT", "target": "DEEPSEEK", "value": 320000}]
       },
-      "deptRanking": [{"deptClass": "计算机科学与技术2301班", "workflowCount": 42, "execCount": 680}],
+      "deptRanking": [{"deptClass": "计科1班", "workflowCount": 42, "execCount": 680}],
       "hourlyTrend": [{"hour": "08:00", "callCount": 45, "avgLatencyMs": 820}]
     },
     "timestamp": 1761826800000
@@ -434,7 +434,7 @@
   {
     "taskTitle": "实训二：多分支条件路由客服智能体构建",
     "courseName": "Web应用综合实训",
-    "targetClass": "计算机科学与技术2301班",
+    "targetClass": "计科1班",
     "taskRequirement": "设计包含条件分支节点的智能体工作流...",
     "requiredNodesJson": { "minNodes": 4, "mustInclude": ["INPUT", "CONDITION", "LLM", "OUTPUT"] },
     "rubricJson": [

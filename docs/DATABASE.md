@@ -181,7 +181,7 @@ erDiagram
 | `password_hash` | `VARCHAR(128)` | 是 | 无 | BCrypt 强哈希加密后的密码密文 |
 | `real_name` | `VARCHAR(64)` | 是 | 无 | 真实姓名 |
 | `role_type` | `VARCHAR(20)` | 是 | `'STUDENT'` | 角色枚举：`ADMIN` / `TEACHER` / `STUDENT` |
-| `dept_class` | `VARCHAR(100)` | 否 | `NULL` | 所属院系或行政班级（如 `计算机科学与技术2301班`） |
+| `dept_class` | `VARCHAR(100)` | 否 | `NULL` | 所属院系或行政班级（如 `计科1班`） |
 | `email` | `VARCHAR(128)` | 否 | `NULL` | 电子邮箱 |
 | `avatar_url` | `VARCHAR(255)` | 否 | `NULL` | 头像地址 |
 | `token_quota` | `INT` | 是 | `50000` | 剩余可用大模型 Token 算力额度 |
@@ -549,12 +549,12 @@ CREATE TABLE `edu_submission` (
 -- 初始种子数据 (Seed Data) - 所有账号默认密码均为: 123456
 -- =========================================================================
 INSERT INTO `sys_user` (`id`, `username`, `password_hash`, `real_name`, `role_type`, `dept_class`, `email`, `token_quota`, `token_used`, `status`) VALUES
-(1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '李俊豪(管理员)', 'ADMIN', '人工智能与计算机学院', 'admin@flowmind.edu.cn', 999999, 12500, 1),
-(2, 'teacher_wang', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '王建国教授', 'TEACHER', '计算机科学与技术系', 'wangjg@flowmind.edu.cn', 200000, 8400, 1),
-(3, 'gufengming', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '顾峰鸣', 'STUDENT', '计算机科学与技术2301班', 'gufm@flowmind.edu.cn', 46800, 3200, 1),
-(4, 'zhangyucheng', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '张誉诚', 'STUDENT', '计算机科学与技术2301班', 'zhangyc@flowmind.edu.cn', 47500, 2500, 1),
-(5, 'haotangxin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '郝唐鑫', 'STUDENT', '计算机科学与技术2301班', 'haotx@flowmind.edu.cn', 48100, 1900, 1),
-(6, 'lijunhao_stu', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '李俊豪', 'STUDENT', '计算机科学与技术2301班', 'lijh@flowmind.edu.cn', 49000, 1000, 1);
+(1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '顾峰鸣(管理员)', 'ADMIN', '人工智能与计算机学院', 'admin@flowmind.edu.cn', 999999, 12500, 1),
+(2, 'teacher_litian', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '李甜', 'TEACHER', '计算机科学与技术系', 'litian@flowmind.edu.cn', 200000, 8400, 1),
+(3, 'gufengming', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '顾峰鸣', 'STUDENT', '计科1班', 'gufm@flowmind.edu.cn', 46800, 3200, 1),
+(4, 'zhangyucheng', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '张誉诚', 'STUDENT', '计科1班', 'zhangyc@flowmind.edu.cn', 47500, 2500, 1),
+(5, 'haotangxin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '郝唐鑫', 'STUDENT', '计科1班', 'haotx@flowmind.edu.cn', 48100, 1900, 1),
+(6, 'lijunhao', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '李俊豪', 'STUDENT', '计科1班', 'lijh@flowmind.edu.cn', 49000, 1000, 1);
 
 -- 预置一条示范工作流主表记录 (顾峰鸣创建，全组4人协同，公开在模板广场)
 INSERT INTO `wf_workflow` (`id`, `wf_code`, `wf_name`, `description`, `category`, `tags`, `creator_id`, `collaborator_ids`, `is_public`, `node_count`, `edge_count`, `fork_count`, `like_count`, `version_tag`, `status`) VALUES
@@ -582,7 +582,7 @@ INSERT INTO `wf_exec_node_log` (`exec_record_id`, `step_order`, `node_key`, `nod
 
 -- 预置实训课程任务主从记录
 INSERT INTO `edu_task` (`id`, `task_code`, `task_title`, `course_name`, `teacher_id`, `target_class`, `task_requirement`, `required_nodes_json`, `rubric_json`, `deadline`, `task_status`) VALUES
-(1, 'TASK-2026-001', '实训一：构建支持知识增强(RAG)的智能代码评审工作流', 'Web应用综合实训', 2, '计算机科学与技术2301班', '要求4人小组协同搭建一个不少于4个节点的AI工作流，必须包含输入节点、知识检索节点、大模型节点与输出节点，并附上完整测试运行记录与不少于100字的实训总结报告。', '{"minNodes": 4, "mustInclude": ["INPUT", "KNOWLEDGE", "LLM", "OUTPUT"]}', '[{"item": "拓扑完整性与节点规范", "maxScore": 30}, {"item": "Prompt工程与知识库结合度", "maxScore": 40}, {"item": "沙箱运行效果与实验报告", "maxScore": 30}]', DATE_ADD(NOW(), INTERVAL 14 DAY), 1);
+(1, 'TASK-2026-001', '实训一：构建支持知识增强(RAG)的智能代码评审工作流', 'Web应用综合实训', 2, '计科1班', '要求4人小组协同搭建一个不少于4个节点的AI工作流，必须包含输入节点、知识检索节点、大模型节点与输出节点，并附上完整测试运行记录与不少于100字的实训总结报告。', '{"minNodes": 4, "mustInclude": ["INPUT", "KNOWLEDGE", "LLM", "OUTPUT"]}', '[{"item": "拓扑完整性与节点规范", "maxScore": 30}, {"item": "Prompt工程与知识库结合度", "maxScore": 40}, {"item": "沙箱运行效果与实验报告", "maxScore": 30}]', DATE_ADD(NOW(), INTERVAL 14 DAY), 1);
 
 INSERT INTO `edu_submission` (`id`, `task_id`, `student_id`, `workflow_id`, `version_tag`, `canvas_snapshot_json`, `student_report`, `is_late`, `auto_check_passed`, `rubric_detail_json`, `score`, `teacher_comment`, `review_status`, `submitted_at`, `reviewed_at`) VALUES
 (1, 1, 3, 1, 'v1.2.0', '{"nodes": [{"elementKey": "node_input_1", "nodeType": "INPUT"}, {"elementKey": "node_know_1", "nodeType": "KNOWLEDGE"}, {"elementKey": "node_llm_1", "nodeType": "LLM"}, {"elementKey": "node_output_1", "nodeType": "OUTPUT"}], "edges": [{"sourceKey": "node_input_1", "targetKey": "node_know_1"}, {"sourceKey": "node_know_1", "targetKey": "node_llm_1"}, {"sourceKey": "node_llm_1", "targetKey": "node_output_1"}]}', '本小组通过Yjs同屏协同完成了Java代码安全缺陷智能审计工作流，结合阿里规约知识库与DeepSeek模型，有效降低了大模型幻觉，测试准确率达95%以上。', 0, 1, '{"拓扑完整性与节点规范": 29, "Prompt工程与知识库结合度": 38, "沙箱运行效果与实验报告": 28}', 95.00, '工作流拓扑清晰，知识检索节点与LLM提示词变量绑定非常规范，多人协同完成度极高！', 1, NOW(), NOW());

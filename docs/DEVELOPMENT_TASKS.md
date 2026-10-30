@@ -4,12 +4,12 @@
 
 为支持 4 人团队通过 GitHub 分支并行协作、并让 OpenAI Codex 按单任务粒度精准执行，本项目共拆分为 **28 个原子开发任务（`TASK-001` ~ `TASK-028`）**。
 
-| 成员姓名 | 团队角色 | 负责任务编号范围 | 负责数据表 | 负责前端视图 (共24个) | GitHub 账号 |
+| 成员姓名 | 团队角色 | 负责任务编号范围 | 负责数据表 | 负责前端视图 (共24个) | GitHub 账号与强制专属分支 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **顾峰鸣** | 组长 / 架构与协同负责人 | `TASK-001` ~ `TASK-007` (7项) | `wf_workflow` (主)<br>`wf_node_edge` (从) | VIEW-04 ~ VIEW-09 (6个) | **[待确认]** (仓库 Owner) |
-| **李俊豪** | 权限安全与大屏负责人 | `TASK-008` ~ `TASK-014` (7项) | `sys_user`<br>`sys_model_audit_log` | VIEW-01 ~ VIEW-03,<br>VIEW-22 ~ VIEW-24 (6个) | `lijunhao` |
-| **张誉诚** | AI引擎与模板生态负责人 | `TASK-015` ~ `TASK-021` (7项) | `wf_exec_record` (主)<br>`wf_exec_node_log` (从) | VIEW-10 ~ VIEW-15 (6个) | `killo.linli` **[待确认]** |
-| **郝唐鑫** | 实训教务与评测统计负责人 | `TASK-022` ~ `TASK-028` (7项) | `edu_task` (主)<br>`edu_submission` (从) | VIEW-16 ~ VIEW-21 (6个) | **[待确认]** |
+| **顾峰鸣** | 组长 / 管理员 / 架构与协同负责人 | `TASK-001` ~ `TASK-007` (7项) | `wf_workflow` (主)<br>`wf_node_edge` (从) | VIEW-04 ~ VIEW-09 (6个) | `Alcrex` (`main` 主分支) |
+| **李俊豪** | 权限安全与大屏负责人 | `TASK-008` ~ `TASK-014` (7项) | `sys_user`<br>`sys_model_audit_log` | VIEW-01 ~ VIEW-03,<br>VIEW-22 ~ VIEW-24 (6个) | `lijunhao` (仅限分支 `lijunhao`) |
+| **张誉诚** | AI引擎与模板生态负责人 | `TASK-015` ~ `TASK-021` (7项) | `wf_exec_record` (主)<br>`wf_exec_node_log` (从) | VIEW-10 ~ VIEW-15 (6个) | `killo.linli` (仅限分支 `killo.linli`) |
+| **郝唐鑫** | 实训教务与评测统计负责人 | `TASK-022` ~ `TASK-028` (7项) | `edu_task` (主)<br>`edu_submission` (从) | VIEW-16 ~ VIEW-21 (6个) | `changdi-in` (仅限分支 `changdi-in`) |
 
 ---
 

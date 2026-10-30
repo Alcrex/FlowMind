@@ -1,0 +1,28 @@
+# FlowMind 代码所有权与 PR 审批规则 (CODEOWNERS)
+# 组长兼系统管理员顾峰鸣 (@Alcrex) 对全仓库合入 main 分支拥有最终审批权
+
+*                                                       @Alcrex
+/AGENTS.md                                              @Alcrex
+/sql/                                                   @Alcrex
+/docs/                                                  @Alcrex
+
+# 子系统一：工作流编排与多人协同 (顾峰鸣 @Alcrex)
+/flowmind-backend/src/main/java/com/flowmind/platform/common/    @Alcrex
+/flowmind-backend/src/main/java/com/flowmind/platform/workflow/  @Alcrex
+/flowmind-frontend/src/views/workspace/                          @Alcrex
+/flowmind-frontend/src/views/workflow/                           @Alcrex
+
+# 子系统二：AI 调度引擎与模板生态 (张誉诚 @killo.linli + 组长 @Alcrex)
+/flowmind-backend/src/main/java/com/flowmind/platform/engine/    @Alcrex
+/flowmind-frontend/src/views/engine/                             @Alcrex
+/flowmind-frontend/src/views/market/                             @Alcrex
+
+# 子系统三：实训教务管理与在线评测 (郝唐鑫 @changdi-in + 组长 @Alcrex)
+/flowmind-backend/src/main/java/com/flowmind/platform/edu/       @Alcrex
+/flowmind-frontend/src/views/edu/                                @Alcrex
+
+# 子系统四：认证授权、算力管控与监控大屏 (李俊豪 @lijunhao + 组长 @Alcrex)
+/flowmind-backend/src/main/java/com/flowmind/platform/system/    @Alcrex
+/flowmind-frontend/src/views/auth/                               @Alcrex
+/flowmind-frontend/src/views/error/                              @Alcrex
+/flowmind-frontend/src/views/admin/                              @Alcrex

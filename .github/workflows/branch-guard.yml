@@ -1,0 +1,64 @@
+name: Branch & Directory Ownership Guard
+
+on:
+  push:
+    branches:
+      - main
+      - killo.linli
+      - changdi-in
+      - lijunhao
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  verify-branch-ownership:
+    name: Verify Member Branch Ownership
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Actor and Branch Mapping
+        shell: bash
+        run: |
+          ACTOR="${{ github.actor }}"
+          EVENT="${{ github.event_name }}"
+          if [ "$EVENT" = "pull_request" ]; then
+            SOURCE_BRANCH="${{ github.head_ref }}"
+          else
+            SOURCE_BRANCH="${{ github.ref_name }}"
+          fi
+
+          echo "Current Actor: $ACTOR"
+          echo "Event Type: $EVENT"
+          echo "Branch: $SOURCE_BRANCH"
+
+          # 组长顾峰鸣 (Alcrex) 拥有最高管理员权限，允许操作所有分支
+          if [ "$ACTOR" = "Alcrex" ]; then
+            echo "✅ 组长/管理员 Alcrex (顾峰鸣) 权限验证通过。"
+            exit 0
+          fi
+
+          # 禁止任何非组长成员直接向 main 分支 push
+          if [ "$EVENT" = "push" ] && [ "$SOURCE_BRANCH" = "main" ]; then
+            echo "❌ 错误：除组长 Alcrex (顾峰鸣) 外，禁止直接向 main 分支推送代码！请推送到你自己的专属分支并发起 Pull Request。"
+            exit 1
+          fi
+
+          # 校验张誉诚 (killo.linli) 只能使用 killo.linli 分支
+          if [ "$ACTOR" = "killo.linli" ] && [ "$SOURCE_BRANCH" != "killo.linli" ]; then
+            echo "❌ 错误：成员 killo.linli (张誉诚) 只能通过专属分支 'killo.linli' 提交代码，当前分支为 '$SOURCE_BRANCH'。"
+            exit 1
+          fi
+
+          # 校验郝唐鑫 (changdi-in) 只能使用 changdi-in 分支
+          if [ "$ACTOR" = "changdi-in" ] && [ "$SOURCE_BRANCH" != "changdi-in" ]; then
+            echo "❌ 错误：成员 changdi-in (郝唐鑫) 只能通过专属分支 'changdi-in' 提交代码，当前分支为 '$SOURCE_BRANCH'。"
+            exit 1
+          fi
+
+          # 校验李俊豪 (lijunhao) 只能使用 lijunhao 分支
+          if [ "$ACTOR" = "lijunhao" ] && [ "$SOURCE_BRANCH" != "lijunhao" ]; then
+            echo "❌ 错误：成员 lijunhao (李俊豪) 只能通过专属分支 'lijunhao' 提交代码，当前分支为 '$SOURCE_BRANCH'。"
+            exit 1
+          fi
+
+          echo "✅ 成员 '$ACTOR' 与专属分支 '$SOURCE_BRANCH' 匹配校验通过！"

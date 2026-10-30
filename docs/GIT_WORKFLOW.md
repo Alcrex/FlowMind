@@ -1,120 +1,109 @@
-# FlowMind GitHub 团队协作与分支管理规范 (GIT_WORKFLOW)
+# FlowMind GitHub 团队协作与专属分支强制隔离规范 (GIT_WORKFLOW)
 
-## 1. 团队成员与 GitHub 协作角色映射
+## 1. 团队成员、GitHub 账号与专属分支绑定表
 
-| 姓名 | 项目角色 | 负责模块代号 | GitHub 账号 | 个人开发分支命名规范 |
+本项目采用 **“一人一专属分支 + 组长统一管控 `main` 主干”** 的严格协作模式。每位组员**仅允许向自己的同名分支推送代码（Push），并通过 Pull Request (PR) 申请合并至 `main`**。
+
+| 姓名 | 系统角色与模块职责 | GitHub 账号 | 强制绑定专属分支 | 允许修改的代码目录范围 |
 | :--- | :--- | :--- | :--- | :--- |
-| **顾峰鸣** | 项目组长 / 架构师 | `common`, `workflow` | **[待确认]** (Repository Owner) | `feat/gufengming-TASK-xxx` |
-| **李俊豪** | 权限安全与大屏负责人 | `system` | `lijunhao` | `feat/lijunhao-TASK-xxx` |
-| **张誉诚** | AI引擎与模板生态负责人 | `engine` | `killo.linli` **[待确认]** | `feat/zhangyucheng-TASK-xxx` |
-| **郝唐鑫** | 实训教务与评测统计负责人 | `edu` | **[待确认]** | `feat/haotangxin-TASK-xxx` |
-
-> **说明**：目前仓库已邀请 `killo.linli` 与 `lijunhao` 两名成员，其余成员 GitHub 账号及 `killo.linli` 与张誉诚/郝唐鑫的精确对应关系标记为 **[待确认]**，由组长顾峰鸣在 GitHub Collaborators 中最终核对确认。
+| **顾峰鸣** | **项目组长 / 系统管理员 (`admin`)**<br>负责公共底座 (`common`) 与工作流协同 (`workflow`) | `Alcrex` | `main` (主干维护及直接提交) | 全仓库最高权限（重点负责 `common/**`, `workflow/**`, `views/workspace/**`, `views/workflow/**`） |
+| **张誉诚** | **组员 1**<br>负责 AI 执行引擎与模板生态 (`engine`) | `killo.linli` | **`killo.linli`**（仅限此分支） | `flowmind-backend/.../engine/**`<br>`flowmind-frontend/src/views/{engine,market}/**`<br>`flowmind-frontend/src/api/engineAndMarketApi.ts`<br>`flowmind-frontend/src/utils/sseClient.ts` |
+| **郝唐鑫** | **组员 2**<br>负责高校实训教务与评测统计 (`edu`，指导教师：**李甜**) | `changdi-in` | **`changdi-in`**（仅限此分支） | `flowmind-backend/.../edu/**`<br>`flowmind-frontend/src/views/edu/**`<br>`flowmind-frontend/src/api/eduApi.ts` |
+| **李俊豪** | **组员 3**<br>负责认证授权、算力管控与监控大屏 (`system`) | `lijunhao` | **`lijunhao`**（仅限此分支） | `flowmind-backend/.../system/**`<br>`flowmind-frontend/src/views/{auth,error,admin}/**`<br>`flowmind-frontend/src/api/authAndAdminApi.ts` |
 
 ---
 
-## 2. 分支模型设计 (Git Branching Strategy)
-
-本项目采用轻量级 **GitHub Flow + `dev` 集成分支** 模型，确保 3 周实训周期内高效并行且主干永远可用：
+## 2. 分支流转拓扑图
 
 ```mermaid
 gitGraph
-    commit id: "init: docs & sql"
-    branch dev
-    checkout dev
-    commit id: "feat(common): TASK-001/002 base scaffold"
-    branch feat/lijunhao-TASK-008
-    checkout feat/lijunhao-TASK-008
-    commit id: "feat(system): TASK-008/009 auth & security"
-    checkout dev
-    merge feat/lijunhao-TASK-008 id: "PR #1 merged"
-    branch feat/gufengming-TASK-003
-    branch feat/zhangyucheng-TASK-015
-    branch feat/haotangxin-TASK-022
-    checkout feat/gufengming-TASK-003
-    commit id: "feat(workflow): TASK-003/004 canvas & ws"
-    checkout dev
-    merge feat/gufengming-TASK-003 id: "PR #2 merged"
-    checkout feat/zhangyucheng-TASK-015
-    commit id: "feat(engine): TASK-015/016 DAG & SSE"
-    checkout dev
-    merge feat/zhangyucheng-TASK-015 id: "PR #3 merged"
-    checkout feat/haotangxin-TASK-022
-    commit id: "feat(edu): TASK-022/023 task & grading"
-    checkout dev
-    merge feat/haotangxin-TASK-022 id: "PR #4 merged"
+    commit id: "init: FlowMind docs & sql (by Alcrex)"
+    branch killo.linli
+    branch changdi-in
+    branch lijunhao
+    checkout lijunhao
+    commit id: "feat(system): [TASK-008/009] 认证与安全模块 (by lijunhao)"
     checkout main
-    merge dev tag: "v1.0.0-release"
+    merge lijunhao id: "PR #1 approved by Alcrex"
+    checkout killo.linli
+    commit id: "feat(engine): [TASK-015/016] DAG引擎与SSE沙箱 (by killo.linli)"
+    checkout main
+    merge killo.linli id: "PR #2 approved by Alcrex"
+    checkout changdi-in
+    commit id: "feat(edu): [TASK-022/023] 实训课题与李甜老师评测端 (by changdi-in)"
+    checkout main
+    merge changdi-in id: "PR #3 approved by Alcrex"
 ```
 
-### 2.1 核心分支说明
-1. **`main`（受保护生产/答辩分支）**：
-   - 严禁任何人直接 `git push origin main`。
-   - 仅在第一阶段检查、第二阶段检查及最终答辩里程碑验收通过后，由组长顾峰鸣从 `dev` 发起 Release PR 合入。
-2. **`dev`（日常开发集成分支）**：
-   - 所有成员（或 Codex 智能体）开发新任务时，必须基于最新的 `dev` 分支切出个人任务分支。
-3. **功能任务分支（`feat/<member>-TASK-<id>`）与修复分支（`fix/<member>-TASK-<id>`）**：
-   - 示例：`feat/gufengming-TASK-003`、`feat/lijunhao-TASK-009`、`feat/zhangyucheng-TASK-016`、`feat/haotangxin-TASK-022`。
-   - 每个分支只聚焦完成 1~2 个紧密关联的 `TASK` 编号，完成后立即提 Pull Request 合入 `dev`。
+---
+
+## 3. 如何强制限制组员“只能通过自己的分支提交代码”（三层防线）
+
+仓库已内置自动化门禁配置文件（`.github/workflows/branch-guard.yml` 与 `.github/CODEOWNERS`），配合 GitHub 仓库分支规则集（Rulesets）构成三层强力约束：
+
+### 第一层：GitHub Actions 自动分支与目录门禁 (`.github/workflows/branch-guard.yml`)
+每次有成员执行 `git push` 或发起 `Pull Request` 时，GitHub Actions 会自动运行 `Branch & Directory Ownership Guard` 检查：
+1. **校验分支归属**：
+   - 若操作者 `github.actor == 'killo.linli'`，其推送的目标分支或 PR 的源分支（Head Ref）**必须为 `killo.linli`**，否则直接判定 Check 失败并拒绝合入；
+   - 若操作者 `github.actor == 'changdi-in'`，其分支**必须为 `changdi-in`**；
+   - 若操作者 `github.actor == 'lijunhao'`，其分支**必须为 `lijunhao`**；
+   - 组长 `Alcrex`（顾峰鸣）拥有全分支豁免权。
+2. **校验文件越界**：自动比对变更文件列表（`git diff --name-only`），防止组员误改其他成员负责的模块目录。
+
+### 第二层：`.github/CODEOWNERS` 强制组长审批
+仓库根目录已配置 `.github/CODEOWNERS`，将全局主干与核心架构的所有权绑定给 `@Alcrex`（顾峰鸣）。任何组员向 `main` 发起的 Pull Request，**必须经过 `@Alcrex` 点击 Approve 审批通过后才允许 Merge**。
+
+### 第三层：GitHub 网页端 1 分钟开启服务端硬拦截（组长顾峰鸣操作指南）
+为了让 GitHub 服务器直接拒绝组员 `git push origin main` 或跨分支推送，组长顾峰鸣（`Alcrex`）只需在 GitHub 网页端执行以下 4 步设置：
+
+1. 打开仓库页面 `https://github.com/Alcrex/FlowMind/settings/rules`（**Settings** $\rightarrow$ 左侧 **Rules** $\rightarrow$ **Rulesets**）。
+2. 点击 **New ruleset** $\rightarrow$ **New branch ruleset**：
+   - **Ruleset Name**：填 `Protect-Main-Branch`
+   - **Enforcement status**：切换为 **Active**
+   - **Bypass list（豁免名单）**：点击 **Add bypass** $\rightarrow$ 选择 **Repository admin**（即组长顾峰鸣 `Alcrex` 本人可直接推送 `main`，而 Collaborators 组员受限）。
+   - **Target branches**：点击 **Add target** $\rightarrow$ 选择 **Include default branch (`main`)**。
+3. 在下方 **Branch rules** 勾选以下三项：
+   - ✅ **Restrict deletions**（禁止删除主分支）
+   - ✅ **Require a pull request before merging** $\rightarrow$ 勾选 **Require review from Code Owners**（强制组长审批 PR，同时徹底禁止组员直接 `git push origin main`）
+   - ✅ **Require status checks to pass** $\rightarrow$ 添加 `verify-branch-ownership`（强制通过专属分支检查）
+   - ✅ **Block force pushes**（禁止强制覆盖推送）
+4. 点击页面底部 **Create** 保存即可立即生效！
 
 ---
 
-## 3. 文件修改边界与防冲突铁律
+## 4. 各成员日常 Git 标准操作命令
 
-为保证 4 人同时使用 Codex 或本地 IDE 开发时不产生合并冲突（Merge Conflict），严格执行以下目录隔离规则：
-
-1. **禁止跨模块修改代码**：
-   - 李俊豪仅修改 `backend/.../system/**` 与 `frontend/src/views/{auth,error,admin}/**`、`api/authAndAdminApi.ts`。
-   - 顾峰鸣仅修改 `backend/.../workflow/**`、`common/**` 与 `frontend/src/views/{workspace,workflow}/**`、`api/workflowApi.ts`。
-   - 张誉诚仅修改 `backend/.../engine/**` 与 `frontend/src/views/{engine,market}/**`、`api/engineAndMarketApi.ts`。
-   - 郝唐鑫仅修改 `backend/.../edu/**` 与 `frontend/src/views/edu/**`、`api/eduApi.ts`。
-2. **共享文件的唯一维护权**：
-   - `sql/init_flowmind.sql`、`flowmind-backend/pom.xml`、`flowmind-frontend/package.json`、`src/router/index.ts` 由组长 **顾峰鸣** 在 `TASK-001` 和 `TASK-005` 中一次性预置好全部 8 张表和 24 条路由。
-   - 若组员确需新增依赖或修改路由，必须在 PR 描述中注明，由组长统一合并。
-
----
-
-## 4. Commit Message 规范 (Conventional Commits)
-
-所有 Git 提交信息必须遵循以下格式：
-
-```text
-<type>(<scope>): [TASK-xxx] <简明中文或英文描述>
-```
-
-- **允许的 `<type>`**：
-  - `feat`：新增功能或视图（如 `feat(workflow): [TASK-003] 实现工作流主从表CRUD与多条件查询`）
-  - `fix`：修复 Bug（如 `fix(engine): [TASK-016] 修复CONDITION节点false分支剪枝状态更新问题`）
-  - `docs`：仅文档更新
-  - `test`：新增或修改单元测试/集成测试
-  - `refactor`：不影响外部接口的代码重构
-- **允许的 `<scope>`**：`common`、`system`、`workflow`、`engine`、`edu`、`frontend`、`sql`、`docs`。
-
----
-
-## 5. Pull Request (PR) 与 Code Review 合并规则
-
-### 5.1 提交 PR 前的自检清单（Codex 与成员必做）
-在发起 PR 到 `dev` 分支前，必须在本地终端依次执行并确保 100% 通过：
+### 4.1 张誉诚 (`killo.linli`) 标准提交流程
 ```bash
-# 1. 拉取最新 dev 分支并变基/合并
-git fetch origin dev
-git rebase origin/dev
+# 1. 切换到自己的专属分支并同步主干最新代码
+git checkout killo.linli
+git pull origin main --rebase
 
-# 2. 若涉及后端修改，运行编译与测试
-cd flowmind-backend && mvn clean test
+# 2. 编写或使用 Codex 完成 engine/market 模块任务后提交
+git add .
+git commit -m "feat(engine): [TASK-015] 实现Kahn拓扑排序与运行主从表"
 
-# 3. 若涉及前端修改，运行类型检查与构建测试
-cd flowmind-frontend && npm run build
+# 3. 仅推送到自己的专属分支 killo.linli
+git push origin killo.linli
+# 随后在 GitHub 网页端发起从 killo.linli -> main 的 Pull Request
 ```
 
-### 5.2 PR 模板格式
-每个 PR 描述必须包含：
-1. **关联任务编号**：如 `Closes TASK-008, TASK-009`
-2. **本次修改文件清单**：列出新增/修改的后端类与前端 `.vue` 视图文件
-3. **接口与数据库一致性核对**：确认未偏离 `docs/DATABASE.md` 与 `docs/API.md`
-4. **本地测试结果截图或日志摘要**
+### 4.2 郝唐鑫 (`changdi-in`) 标准提交流程
+```bash
+git checkout changdi-in
+git pull origin main --rebase
+git add .
+git commit -m "feat(edu): [TASK-022] 实现实训任务主从表与快照预检"
+git push origin changdi-in
+# 随后在 GitHub 网页端发起从 changdi-in -> main 的 Pull Request
+```
 
-### 5.3 Code Review 审批机制
-- 组员发起的 PR 由组长 **顾峰鸣** 进行 Code Review，重点核查是否误改他人目录、是否遗漏 `@RestControllerAdvice` 异常兼容、是否包含硬编码密钥。
-- 组长发起的 PR 由任意一名组员（`lijunhao` 或 `killo.linli`）Review 后合入。
+### 4.3 李俊豪 (`lijunhao`) 标准提交流程
+```bash
+git checkout lijunhao
+git pull origin main --rebase
+git add .
+git commit -m "feat(system): [TASK-008] 实现用户审计表与JWT认证"
+git push origin lijunhao
+# 随后在 GitHub 网页端发起从 lijunhao -> main 的 Pull Request
+```

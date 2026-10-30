@@ -51,12 +51,12 @@ flowchart LR
 4. 最后向我汇报：新增/修改的文件列表、核心实现逻辑说明、测试运行结果以及发现的任何潜在问题。
 ```
 
-### 3.2 组长【顾峰鸣】专属一键开发提示词（架构底座 + 工作流主从表 + 画布协同）
+### 3.2 组长/系统管理员【顾峰鸣 (GitHub: Alcrex)】专属一键开发提示词（架构底座 + 工作流主从表 + 画布协同）
 ```text
-我是项目组长顾峰鸣。请先阅读根目录 AGENTS.md 以及 docs/ 下的 DATABASE.md、API.md、BUSINESS_LOGIC.md、DEVELOPMENT_TASKS.md。
+我是项目组长兼系统管理员顾峰鸣（GitHub: Alcrex，维护 main 主分支）。请先阅读根目录 AGENTS.md 以及 docs/ 下的 DATABASE.md、API.md、BUSINESS_LOGIC.md、DEVELOPMENT_TASKS.md。
 请按顺序帮我完成我负责的后端与前端任务：
 1. 后端公共底座与工作流协同模块（TASK-001、TASK-002、TASK-003、TASK-004）：
-   - 生成 sql/init_flowmind.sql 及 flowmind-backend Maven 工程骨架；
+   - 生成 sql/init_flowmind.sql（管理员 admin 姓名为顾峰鸣(管理员)，指导教师 teacher_litian 姓名为李甜）及 flowmind-backend Maven 工程骨架；
    - 实现 Result、PageResult、ErrorCode、BusinessException、GlobalExceptionHandler、CorsFilter、WebSocketConfig；
    - 实现 wf_workflow（主表）与 wf_node_edge（从表）的实体、Mapper、多条件组合分页查询、画布主从事务保存、版本快照回滚及 CollabWebSocketHandler 多人实时光标协同服务。
 2. 前端工程基座与工作流视图（TASK-005、TASK-006、TASK-007）：
@@ -65,9 +65,9 @@ flowchart LR
 完成后执行 mvn compile 和 npm run build 验证通过，并汇报结果。
 ```
 
-### 3.3 组员【李俊豪】专属一键开发提示词（认证安全 + RBAC + 算力与监控大屏）
+### 3.3 组员【李俊豪 (GitHub: lijunhao)】专属一键开发提示词（认证安全 + RBAC + 算力与监控大屏）
 ```text
-我是组员李俊豪（GitHub: lijunhao）。请阅读根目录 AGENTS.md 以及 docs/ 下的 DATABASE.md、API.md、BUSINESS_LOGIC.md、DEVELOPMENT_TASKS.md。
+我是组员李俊豪（GitHub: lijunhao，仅在专属分支 lijunhao 上开发提交）。请阅读根目录 AGENTS.md 以及 docs/ 下的 DATABASE.md、API.md、BUSINESS_LOGIC.md、DEVELOPMENT_TASKS.md。
 请完成我负责的权限安全与管理员大屏子系统（TASK-008、TASK-009、TASK-010、TASK-011、TASK-012、TASK-013）：
 1. 后端 system 模块与安全组件：
    - 实现 sys_user 与 sys_model_audit_log 实体和 Mapper；
@@ -78,9 +78,9 @@ flowchart LR
 3. 编写并运行 AuthAndSecurityIntegrationTest 确保全部通过。
 ```
 
-### 3.4 组员【张誉诚】专属一键开发提示词（AI DAG 引擎 + SSE 沙箱 + 模板广场）
+### 3.4 组员【张誉诚 (GitHub: killo.linli)】专属一键开发提示词（AI DAG 引擎 + SSE 沙箱 + 模板广场）
 ```text
-我是组员张誉诚。请阅读根目录 AGENTS.md 以及 docs/ 下的 DATABASE.md、API.md、BUSINESS_LOGIC.md、DEVELOPMENT_TASKS.md。
+我是组员张誉诚（GitHub: killo.linli，仅在专属分支 killo.linli 上开发提交）。请阅读根目录 AGENTS.md 以及 docs/ 下的 DATABASE.md、API.md、BUSINESS_LOGIC.md、DEVELOPMENT_TASKS.md。
 请完成我负责的 AI 执行引擎与模板生态子系统（TASK-015、TASK-016、TASK-017、TASK-018、TASK-019、TASK-020）：
 1. 后端 engine 模块：
    - 实现 wf_exec_record（主表）与 wf_exec_node_log（从表）实体与 Mapper；
@@ -91,13 +91,13 @@ flowchart LR
 3. 编写并运行 WorkflowEngineAndMarketTest 确保全部通过。
 ```
 
-### 3.5 组员【郝唐鑫】专属一键开发提示词（实训教务 + 快照评测 + 学情统计）
+### 3.5 组员【郝唐鑫 (GitHub: changdi-in)】专属一键开发提示词（实训教务 + 快照评测 + 学情统计）
 ```text
-我是组员郝唐鑫。请阅读根目录 AGENTS.md 以及 docs/ 下的 DATABASE.md、API.md、BUSINESS_LOGIC.md、DEVELOPMENT_TASKS.md。
-请完成我负责的高校实训教务管理与在线评测分析子系统（TASK-022、TASK-023、TASK-024、TASK-025、TASK-026）：
+我是组员郝唐鑫（GitHub: changdi-in，仅在专属分支 changdi-in 上开发提交）。请阅读根目录 AGENTS.md 以及 docs/ 下的 DATABASE.md、API.md、BUSINESS_LOGIC.md、DEVELOPMENT_TASKS.md。
+请完成我负责的高校实训教务管理与在线评测分析子系统（指导教师：李甜，任务编号 TASK-022、TASK-023、TASK-024、TASK-025、TASK-026）：
 1. 后端 edu 模块：
    - 实现 edu_task（主表）与 edu_submission（从表）实体与 Mapper；
-   - 实现教师端实训课题 CRUD、学生端提交作业（自动固化工作流画布为 canvas_snapshot_json、校验 required_nodes_json 必含节点规则、判断逾期状态）；
+   - 实现教师端（李甜老师）实训课题 CRUD、学生端提交作业（自动固化工作流画布为 canvas_snapshot_json、校验 required_nodes_json 必含节点规则、判断逾期状态）；
    - 实现教师端作业多条件分页查询、在线批改评分评语接口，以及 /api/v1/edu/analytics 班级学情 ECharts 统计报表接口（成绩分段、五维雷达、提交趋势、高频报错节点分布）。
 2. 前端 6 个视图组件：
    - 实现 VIEW-16 (StudentTaskListView.vue) 至 VIEW-21 (EduAnalyticsView.vue) 共 6 个视图组件。
