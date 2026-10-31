@@ -1,17 +1,15 @@
 import { test, expect, type BrowserContext } from '@playwright/test'
-import { createHmac, randomUUID } from 'node:crypto'
-const secret = 'flowmind-local-development-secret-change-before-deployment-2026'
-function token(id: number) {
-  const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url')
-  const payload = Buffer.from(JSON.stringify({ sub: String(id), userId: id, jti: randomUUID(), exp: Math.floor(Date.now() / 1000) + 3600, iat: Math.floor(Date.now() / 1000) })).toString('base64url')
-  return `${header}.${payload}.${createHmac('sha256', secret).update(`${header}.${payload}`).digest('base64url')}`
+async function login(context: BrowserContext, username: string) {
+  const response = await context.request.post('http://localhost:8080/api/v1/auth/login', { data: { username, password: '123456' } })
+  expect(response.ok()).toBeTruthy()
+  return (await response.json()).data.token as string
 }
 async function authenticate(context: BrowserContext, value: string) {
   await context.addInitScript(value => localStorage.setItem('flowmind.token', value), value)
 }
 test('real workflow APIs, canvas editing, Yjs convergence, cursors, snapshots and rollback', async ({ browser }) => {
-  const ownerToken = token(3), memberToken = token(4)
   const a = await browser.newContext(), b = await browser.newContext()
+  const ownerToken = await login(a, 'gufengming'), memberToken = await login(b, 'zhangyucheng')
   await authenticate(a, ownerToken); await authenticate(b, memberToken)
   const pa = await a.newPage(), pb = await b.newPage()
   const errors: string[] = []; pa.on('pageerror', ex => errors.push(ex.message)); pb.on('pageerror', ex => errors.push(ex.message))
@@ -95,7 +93,7 @@ test('real workflow APIs, canvas editing, Yjs convergence, cursors, snapshots an
 })
 
 test('workflow list supports UI create, metadata edit, filters, clone and delete', async ({ browser }) => {
-  const context = await browser.newContext(); const ownerToken = token(3)
+  const context = await browser.newContext(); const ownerToken = await login(context, 'gufengming')
   await authenticate(context, ownerToken)
   const page = await context.newPage()
   const name = `UI工作流 ${Date.now()}`, renamed = name + ' 已更新'

@@ -3,9 +3,12 @@ package com.flowmind.platform.engine.runtime;
 import com.fasterxml.jackson.databind.*;
 import com.flowmind.platform.common.api.ErrorCode;
 import com.flowmind.platform.common.exception.BusinessException;
+import com.flowmind.platform.system.service.SysAuditAndConfigService;
+import com.flowmind.platform.system.service.SysAuditAndConfigService.RuntimeModelConfig;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import java.io.*;
 import java.net.URI;
@@ -16,6 +19,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /** OpenAI-compatible DeepSeek/Qwen streaming transport; never replays a partially delivered response. */
 @Slf4j
@@ -24,21 +28,31 @@ public class LlmClientAdapter implements AutoCloseable {
     public record Completion(String output, int tokens, String provider) {}
     private final ObjectMapper json;
     private final Environment env;
+    private final Supplier<Optional<RuntimeModelConfig>> configuration;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     private final ScheduledExecutorService deadlines = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().daemon().factory());
-    public LlmClientAdapter(ObjectMapper json, Environment env) { this.json = json; this.env = env; }
+    @Autowired
+    public LlmClientAdapter(ObjectMapper json, Environment env, SysAuditAndConfigService configuration) {
+        this(json, env, configuration::configuredRuntimeConfig);
+    }
+    /** Standalone transport used without Spring or a configuration database. */
+    public LlmClientAdapter(ObjectMapper json, Environment env) { this(json, env, Optional::empty); }
+    private LlmClientAdapter(ObjectMapper json, Environment env, Supplier<Optional<RuntimeModelConfig>> configuration) {
+        this.json = json; this.env = env; this.configuration = configuration;
+    }
     @Override @PreDestroy public void close() { deadlines.shutdownNow(); http.close(); }
     private String property(String key, String fallback) { return env.getProperty("flowmind.llm." + key, fallback); }
     public Completion complete(String model, double temperature, String system, String prompt, int budget, Consumer<String> onChunk) {
-        String provider = model == null || model.isBlank() ? property("active-provider", "DEEPSEEK") : model.toUpperCase(Locale.ROOT);
+        // Resolve once per call so live updates cannot mix a new URL with an old key/model.
+        var config = configuration.get().orElseGet(() -> environmentConfig(model));
+        String provider = config.activeProvider();
         if (!Set.of("DEEPSEEK", "QWEN", "MOCK_LOCAL").contains(provider)) throw new BusinessException(ErrorCode.PARAM_ERROR, "未知模型通道");
-        String prefix = provider.toLowerCase(Locale.ROOT);
-        String key = property(prefix + ".api-key", env.getProperty(provider + "_API_KEY", ""));
+        String key = config.apiKey();
         if (key.isBlank() || "MOCK_LOCAL".equals(provider)) return local(system, prompt, budget, onChunk);
-        boolean fallback = Boolean.parseBoolean(property("enable-mock-fallback", "true"));
+        boolean fallback = config.enableMockFallback();
         AtomicBoolean delivered = new AtomicBoolean();
         try {
-            return remote(provider, temperature, system, prompt, budget, key, chunk -> { delivered.set(true); onChunk.accept(chunk); });
+            return remote(config, temperature, system, prompt, budget, chunk -> { delivered.set(true); onChunk.accept(chunk); });
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt(); throw new BusinessException(ErrorCode.INTERNAL_ERROR, "模型调用已中断");
         } catch (Exception ex) {
@@ -47,20 +61,25 @@ public class LlmClientAdapter implements AutoCloseable {
             return local(system, prompt, budget, onChunk);
         }
     }
-    private Completion remote(String provider, double temperature, String system, String prompt, int budget, String key,
-                              Consumer<String> onChunk) throws Exception {
+    private RuntimeModelConfig environmentConfig(String model) {
+        String provider = model == null || model.isBlank() ? property("active-provider", "DEEPSEEK") : model.toUpperCase(Locale.ROOT);
         String prefix = provider.toLowerCase(Locale.ROOT);
         String base = property(prefix + ".base-url", "QWEN".equals(provider)
             ? "https://dashscope.aliyuncs.com/compatible-mode/v1" : "https://api.deepseek.com/v1");
         String modelName = property(prefix + ".model-name", "QWEN".equals(provider) ? "qwen-plus" : "deepseek-chat");
+        return new RuntimeModelConfig(provider, base, property(prefix + ".api-key", env.getProperty(provider + "_API_KEY", "")),
+            modelName, Boolean.parseBoolean(property("enable-mock-fallback", "true")));
+    }
+    private Completion remote(RuntimeModelConfig config, double temperature, String system, String prompt, int budget,
+                              Consumer<String> onChunk) throws Exception {
         int promptTokens = estimate(system + prompt);
         if (budget <= promptTokens) throw new BusinessException(ErrorCode.QUOTA_INSUFFICIENT);
         int timeout = Integer.parseInt(property("timeout-seconds", "60"));
-        var body = Map.of("model", modelName, "temperature", temperature, "stream", true,
+        var body = Map.of("model", config.modelName(), "temperature", temperature, "stream", true,
             "stream_options", Map.of("include_usage", true), "max_tokens", Math.min(4096, budget - promptTokens),
             "messages", List.of(Map.of("role", "system", "content", system), Map.of("role", "user", "content", prompt)));
-        var req = HttpRequest.newBuilder(URI.create(base.replaceAll("/+$", "") + "/chat/completions"))
-            .timeout(Duration.ofSeconds(timeout)).header("Authorization", "Bearer " + key)
+        var req = HttpRequest.newBuilder(URI.create(config.baseUrl().replaceAll("/+$", "") + "/chat/completions"))
+            .timeout(Duration.ofSeconds(timeout)).header("Authorization", "Bearer " + config.apiKey())
             .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body))).build();
         var response = http.send(req, HttpResponse.BodyHandlers.ofInputStream());
         try (InputStream stream = response.body()) {
@@ -84,7 +103,7 @@ public class LlmClientAdapter implements AutoCloseable {
                     if (output.length() > 200000) throw new IOException("Model output exceeded limit");
                 }
                 if (expired.get() || !ended || output.isEmpty()) throw new IOException("Incomplete model stream");
-                return new Completion(output.toString(), usage > 0 ? usage : estimate(system + prompt + output), provider);
+                return new Completion(output.toString(), usage > 0 ? usage : estimate(system + prompt + output), config.activeProvider());
             } finally { timer.cancel(false); }
         }
     }

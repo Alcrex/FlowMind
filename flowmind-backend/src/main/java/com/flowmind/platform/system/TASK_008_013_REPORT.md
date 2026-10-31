@@ -1,5 +1,7 @@
 # TASK-008～013 完成报告（李俊豪 / lijunhao）
 
+> 本文件为模块开发阶段的历史记录。后续已接入 engine/edu、补齐24视图、完成模型运行配置连接及移除浏览器认证替身；以 `docs/INTEGRATION_ACCEPTANCE.md` 为当前集成验证依据。
+
 完成日期：2026-10-31。工作分支：`lijunhao`，从已有的工作流基座快进同步后开发；提交包含共同作者 `lijunhao <qazlijunhao@gmail.com>`，未推送。
 
 ## 实现范围

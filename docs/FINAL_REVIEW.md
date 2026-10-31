@@ -1,5 +1,7 @@
 # FlowMind 架构一致性审查与最终确认报告 (FINAL_REVIEW)
 
+> 本文件记录设计审查；当前实现修复与实测验收结果见 [集成验收报告](INTEGRATION_ACCEPTANCE.md)。
+
 > 本文件与项目根目录 `FINAL_REVIEW.md` 保持同步，供 `docs/` 目录内查阅。
 
 ## 1. 已完成的设计与文档清单

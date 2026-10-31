@@ -4,9 +4,9 @@
 
 2026—2027 学年第一学期《Web 应用综合实训》课程项目。
 
-FlowMind 面向高校人工智能与软件工程实践教学，计划将工作流拖拽编排、多人画布协同、AI 流式执行与实训教务管理整合到同一个 Web 平台中，覆盖“教师发布课题 → 学生协同编排 → 提交画布快照与报告 → 教师试跑批改 → 班级学情分析”的完整流程。
+FlowMind 面向高校人工智能与软件工程实践教学，将工作流拖拽编排、多人画布协同、AI 流式执行与实训教务管理整合到同一个 Web 平台中，覆盖“教师发布课题 → 学生协同编排 → 提交画布快照与报告 → 教师试跑批改 → 班级学情分析”的完整流程。
 
-> **当前进度：已实现 TASK-001～TASK-007 的公共底座与工作流模块。** 后端包含工作流主从事务、版本快照、协作鉴权和 WebSocket 服务；前端包含 VIEW-04～VIEW-09 六个视图及 Yjs 协同画布。其余成员的认证业务、引擎、教务和管理视图仍待接入。验证与启动说明见 [本批次交付报告](docs/TASK_001_007_REPORT.md)。
+> **当前状态：四大业务子系统与全部 24 个视图已接入。** 认证安全、协同画布、执行引擎、模板广场、教务批改与统计大屏均有实际实现。管理员保存的模型配置即时用于执行引擎，浏览器测试使用真实认证接口。可复现命令与验证范围见 [集成验收报告](docs/INTEGRATION_ACCEPTANCE.md)。阶段交付报告保留历史记录，不代表当前缺失功能。
 
 ## 1. 项目目标
 
@@ -43,8 +43,8 @@ FlowMind 面向高校人工智能与软件工程实践教学，计划将工作�
 | --- | --- | --- |
 | 后端 | Spring Boot 3.3.5、MyBatis-Plus 3.5.7、Spring Security 6、JJWT | JDK 21、Maven 3.9+ |
 | 前端 | Vue 3.5、TypeScript、Vite 5、Pinia、Vue Router 4、Element Plus | Node.js 20+、npm 10+ |
-| 画布与协同 | `@vue-flow/core`、Yjs、WebSocket、Monaco Editor | 现代浏览器 |
-| 流式通信与图表 | SSE、`@microsoft/fetch-event-source`、ECharts 5 | 随前后端工程安装 |
+| 画布与协同 | `@vue-flow/core`、Yjs、WebSocket、节点参数与文本编辑 | 现代浏览器 |
+| 流式通信与图表 | Fetch SSE 流式解析、ECharts 5 | 随前后端工程安装 |
 | 数据库 | MySQL | MySQL 8.0+ |
 | 缓存 | Redis，支持内存降级 | Redis 7.x（可选） |
 | AI 通道 | DeepSeek / 通义千问兼容接口、本地流式沙箱 | 外部 API Key（可选） |
@@ -99,7 +99,7 @@ FlowMind/
 
 ### 工程组织
 
-以下为完整工程的目标结构；当前已创建公共层、工作流模块与前端基座。完整类名与 24 个视图文件路径以 [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) 为准。
+以下工程目录均已创建。完整类名与 24 个视图文件路径以 [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) 为准。
 
 ```text
 flowmind-backend/
@@ -113,10 +113,10 @@ flowmind-backend/
     │   │   ├── workflow/               # 工作流、版本与协同
     │   │   ├── engine/                 # DAG、节点执行与模板
     │   │   └── edu/                    # 课题、作业与统计
-    │   └── resources/
-    │       ├── application.yml
-    │       └── application-test.yml
-    └── test/java/com/flowmind/platform/
+    │   └── resources/application.yml
+    └── test/
+        ├── java/com/flowmind/platform/
+        └── resources/                  # H2 与 MySQL 验收配置
 
 flowmind-frontend/
 ├── package.json
@@ -183,16 +183,18 @@ SOURCE sql/init_flowmind.sql;
 
 脚本包含数据库创建、8 张表的重建和演示数据插入。**重复执行会删除并重建同名业务表，清除已有数据，请仅在可重置的开发或演示数据库中使用。**
 
-### 7.2 后端启动（工程创建后）
+### 7.2 后端启动
 
-先在 `flowmind-backend/src/main/resources/application.yml` 中配置数据库连接、JWT 签名参数，以及按需启用的 Redis 与模型通道。数据库用户名与密码以本地环境为准，真实密钥不提交到仓库。
+通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD`、`JWT_SECRET` 环境变量配置数据库连接与 JWT 签名参数。默认数据库是本机 `flowmind_db`，用户名 `root`，密码为空；请按本机实际设置覆盖。设置 `REDIS_ENABLED=true` 可启用 Redis，连接失败会回退内存。真实密钥不提交到仓库。
 
 ```shell
 cd flowmind-backend
 mvn spring-boot:run
 ```
 
-### 7.3 前端启动（工程创建后）
+管理员可在“模型与审计”中保存通道、Base URL、模型名称、API Key 和降级开关；保存后下一次模型调用即生效。已保存的管理员配置统一控制 LLM 通道，优先于节点和环境中的默认通道。没有保存管理员配置时，保留节点及 `flowmind.llm.*` 环境配置。未配置 Key 或选择 `MOCK_LOCAL` 时使用本地沙箱；有 Key 的远端调用失败时，仅在启用降级且尚未输出内容时回退。Key 留空表示保留已存 Key。
+
+### 7.3 前端启动
 
 在另一个终端执行：
 
@@ -208,12 +210,12 @@ npm run dev
 | --- | --- |
 | 前端页面 | `http://localhost:5173` |
 | 后端 API | `http://localhost:8080/api/v1` |
-| Knife4j 接口文档 | `http://localhost:8080/doc.html` |
+| Swagger 接口文档 | `http://localhost:8080/doc.html` |
 | 画布协同 WebSocket | `ws://localhost:8080/ws/collab/{workflowId}?token={jwt}` |
 
 ### 7.4 演示账号
 
-初始化脚本预置以下账号，脚本注释约定的初始密码统一为 `123456`。账号登录需待认证模块实现后验证。
+初始化脚本预置以下账号，初始密码统一为 `123456`，已通过 BCrypt 与真实登录接口验证。
 
 | 角色 | 用户名 | 显示姓名 |
 | --- | --- | --- |
@@ -252,7 +254,7 @@ feat(workflow): [TASK-003] 实现工作流主从表管理与多条件查询
 
 ## 9. 测试与验收
 
-以下命令在对应工程创建并安装依赖后执行。
+以下命令在已安装 Maven/npm 依赖后执行。
 
 后端修改后：
 
@@ -270,7 +272,23 @@ npm run build
 
 验收重点包括：BCrypt 密码校验、角色越权拦截、退出后令牌失效、敏感词拦截与审计、统一异常响应、3 对主从表事务操作、DAG 环路检测与条件分支、SSE 流式输出、协同同步、作业快照隔离及真实统计聚合。
 
-详细用例和测试类要求见 [TESTING.md](docs/TESTING.md)。当前仓库尚无前后端工程，暂不具备执行上述构建与测试的条件。
+完整浏览器验收（Windows，需安装 Microsoft Edge，8080/5173 端口需空闲）：
+
+```powershell
+cd flowmind-frontend
+npm run test:e2e
+```
+
+Playwright 自动启动并关闭独立 H2 后端和 Vite，使用真实登录、注册与权限接口。覆盖工作流协同、引擎流式执行、模板 Fork、教师发布/学生提交/快照试跑/评分反馈，以及管理员与教务 ECharts 图表。
+
+真实 MySQL 8.0 验收（Windows，使用已安装的 MySQL 二进制）：
+
+```powershell
+cd flowmind-backend
+./scripts/test_mysql.ps1 -MySqlBin 'D:\MYSQL\MySQL Server 8.0\bin'
+```
+
+此脚本在临时目录启动仅绑定本机的新 MySQL 实例，创建随机验收库，测试后关闭并删除临时数据。无需现有数据库密码，不连接或重建本机业务库。也可通过 `MYSQL_HOME` 指定 MySQL 安装目录并省略参数。详细用例与验证边界见 [TESTING.md](docs/TESTING.md) 和 [集成验收报告](docs/INTEGRATION_ACCEPTANCE.md)。
 
 ## 10. 文档导航
 

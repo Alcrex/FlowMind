@@ -54,6 +54,7 @@ class WorkflowEngineAndMarketTest {
         for (String table : List.of("edu_submission","wf_exec_node_log","wf_exec_record","wf_node_edge","wf_workflow")) jdbc.update("DELETE FROM " + table);
         jdbc.update("UPDATE sys_user SET token_quota = 50000, token_used = 0, status = 1");
         jdbc.update("DELETE FROM sys_model_audit_log WHERE module_name = 'ENGINE'");
+        jdbc.update("DELETE FROM sys_model_audit_log WHERE action_type = 'MODEL_CONFIG'");
         token = jwt.generateToken(4L,"zhangyucheng","张誉诚","STUDENT");
         outsider = jwt.generateToken(5L,"haotangxin","郝唐鑫","STUDENT");
         admin = jwt.generateToken(1L,"admin","顾峰鸣","ADMIN");
@@ -267,6 +268,72 @@ class WorkflowEngineAndMarketTest {
                     assertThat(json.readTree(requestBody.get()).path("stream").asBoolean()).isTrue();
                 } finally { closeAdapter(adapter); }
             }
+        } finally { server.stop(0); }
+    }
+
+    private void saveModelConfig(String provider, String base, String key, boolean fallback) throws Exception {
+        var response = body(mvc.perform(put("/api/v1/admin/models/config").header("Authorization", "Bearer " + admin)
+            .contentType("application/json").content(json.writeValueAsString(Map.of(
+                "activeProvider", provider, "baseUrl", base, "apiKeyPlain", key,
+                "modelName", "configured-" + provider.toLowerCase(Locale.ROOT), "enableMockFallback", fallback,
+                "sensitiveWords", List.of("drop table")))))
+            .andExpect(status().isOk()).andReturn());
+        if (!key.isEmpty()) assertThat(response.toString()).doesNotContain(key);
+    }
+
+    @Test void administratorConfigControlsRealTransportAndUpdatesWithoutRestart() throws Exception {
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        var requests = new ArrayList<String>();
+        server.createContext("/", exchange -> {
+            synchronized (requests) {
+                requests.add(exchange.getRequestURI().getPath());
+                requests.add(exchange.getRequestHeaders().getFirst("Authorization"));
+                requests.add(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            }
+            byte[] bytes = ("data: {\"choices\":[{\"delta\":{\"content\":\"configured reply\"},\"finish_reason\":\"stop\"}]}\n\n"
+                + "data: {\"choices\":[],\"usage\":{\"total_tokens\":17}}\n\ndata: [DONE]\n\n").getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
+            exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        server.start();
+        try {
+            long id = generatedId("回答问题");
+            for (String provider : List.of("DEEPSEEK", "QWEN")) {
+                String key = "test-admin-key-" + provider;
+                saveModelConfig(provider, "http://127.0.0.1:" + server.getAddress().getPort() + "/" + provider, key, false);
+                JsonNode result = execute(id, "hello");
+                assertThat(result.path("record").path("execStatus").asText()).isEqualTo("SUCCESS");
+                assertThat(result.path("record").path("finalOutput").path("report").asText()).isEqualTo("configured reply");
+                assertThat(result.path("record").path("totalTokens").asInt()).isEqualTo(17);
+                assertThat(jdbc.queryForObject("SELECT model_provider FROM sys_model_audit_log WHERE action_type='EXEC_AI' ORDER BY id DESC LIMIT 1", String.class)).isEqualTo(provider);
+                synchronized (requests) {
+                    assertThat(requests.get(requests.size() - 3)).isEqualTo("/" + provider + "/chat/completions");
+                    assertThat(requests.get(requests.size() - 2)).isEqualTo("Bearer " + key);
+                    assertThat(json.readTree(requests.getLast()).path("model").asText()).isEqualTo("configured-" + provider.toLowerCase(Locale.ROOT));
+                }
+            }
+            saveModelConfig("MOCK_LOCAL", "http://127.0.0.1:" + server.getAddress().getPort(), "", false);
+            assertThat(execute(id, "hello").path("record").path("finalOutput").path("report").asText()).contains("本地沙箱");
+            assertThat(requests).hasSize(6);
+        } finally { server.stop(0); }
+    }
+
+    @Test void administratorFallbackSettingIsEnforcedAndMissingKeyRemainsOfflineCapable() throws Exception {
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/chat/completions", exchange -> { exchange.sendResponseHeaders(503, -1); exchange.close(); });
+        server.start();
+        try {
+            long id = generatedId("回答问题");
+            String base = "http://127.0.0.1:" + server.getAddress().getPort() + "/v1";
+            saveModelConfig("DEEPSEEK", base, "test-admin-key", false);
+            var failed = execute(id, "hello");
+            assertThat(failed.path("record").path("execStatus").asText()).isEqualTo("FAILED");
+            assertThat(failed.path("record").path("totalTokens").asInt()).isZero();
+            saveModelConfig("DEEPSEEK", base, "", true);
+            assertThat(execute(id, "hello").path("record").path("finalOutput").path("report").asText()).contains("本地沙箱");
+            jdbc.update("DELETE FROM sys_model_audit_log WHERE action_type='MODEL_CONFIG'");
+            saveModelConfig("QWEN", base, "", false);
+            assertThat(execute(id, "hello").path("record").path("execStatus").asText()).isEqualTo("SUCCESS");
         } finally { server.stop(0); }
     }
     @Test void remoteFailureFallsBackLocallyButPartialStreamNeverDuplicatesOutput() throws Exception {

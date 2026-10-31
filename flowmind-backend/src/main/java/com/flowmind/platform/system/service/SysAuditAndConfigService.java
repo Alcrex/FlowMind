@@ -92,12 +92,12 @@ public class SysAuditAndConfigService {
             .eq(SysModelAuditLog::getModuleName, "ADMIN").eq(SysModelAuditLog::getActionType, "MODEL_CONFIG")
             .orderByDesc(SysModelAuditLog::getId).last("LIMIT 1"));
         var defaults = new ModelConfigDTO();
-        if (rows.isEmpty() || rows.getFirst().getDetailJson() == null) return new StoredConfig(defaults, "");
+        if (rows.isEmpty() || rows.getFirst().getDetailJson() == null) return new StoredConfig(defaults, "", false);
         JsonNode detail = rows.getFirst().getDetailJson();
         // Initial SQL seed is a descriptive audit entry, rather than a full configuration snapshot.
-        if (!detail.has("configuration")) return new StoredConfig(defaults, "");
+        if (!detail.has("configuration")) return new StoredConfig(defaults, "", false);
         try {
-            return new StoredConfig(json.treeToValue(detail.get("configuration"), ModelConfigDTO.class), detail.path("apiKeyEncrypted").asText(""));
+            return new StoredConfig(json.treeToValue(detail.get("configuration"), ModelConfigDTO.class), detail.path("apiKeyEncrypted").asText(""), true);
         } catch (Exception ex) { throw new IllegalStateException("Invalid persisted model configuration", ex); }
     }
 
@@ -112,7 +112,16 @@ public class SysAuditAndConfigService {
 
     /** Server-side adapter seam: contains the usable key and must never be returned by a controller. */
     public RuntimeModelConfig runtimeConfig() {
+        return runtimeConfig(storedConfig());
+    }
+
+    /** An initial descriptive seed is not an administrator override of environment configuration. */
+    public Optional<RuntimeModelConfig> configuredRuntimeConfig() {
         var stored = storedConfig();
+        return stored.persisted() ? Optional.of(runtimeConfig(stored)) : Optional.empty();
+    }
+
+    private RuntimeModelConfig runtimeConfig(StoredConfig stored) {
         return new RuntimeModelConfig(stored.config().getActiveProvider(), stored.config().getBaseUrl(),
             decrypt(stored.encryptedKey()), stored.config().getModelName(), stored.config().getEnableMockFallback());
     }
@@ -177,7 +186,7 @@ public class SysAuditAndConfigService {
     }
 
     private static boolean hasText(String value) { return value != null && !value.isBlank(); }
-    private record StoredConfig(ModelConfigDTO config, String encryptedKey) {}
+    private record StoredConfig(ModelConfigDTO config, String encryptedKey, boolean persisted) {}
     private record FlowEdge(String source, String target) {}
     public record RuntimeModelConfig(String activeProvider, String baseUrl, String apiKey, String modelName, boolean enableMockFallback) {
         @Override public String toString() { return "RuntimeModelConfig[provider=" + activeProvider + ", model=" + modelName + "]"; }

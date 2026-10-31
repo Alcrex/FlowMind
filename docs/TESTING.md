@@ -81,3 +81,33 @@ npm install
 npm run build
 ```
 验收红线：`mvn clean test` 失败数为 `0`，`npm run build` 退出码为 `0` 且 `src/views/` 下 `.vue` 文件总数不少于 `24` 个。
+
+### 3.3 浏览器端集成验收
+
+在 Windows 安装 Microsoft Edge，保持 8080、5173 端口空闲后执行：
+
+```powershell
+cd flowmind-frontend
+npm run test:e2e
+```
+
+Playwright 自动管理 `scripts/start_browser_test_server.ps1` 和 Vite 的启动与退出；后端使用完整生产 Controller、JDK 21 与独立 H2 测试库，不再注册旧 `/auth/me` 替身。测试通过真实登录取得 Token，不伪造 JWT。禁止复用不明后端执行会写数据的验收。
+
+- `workflow.spec.ts`：双窗口 Yjs、光标、连线、配置、并发新增、版本回滚和列表 CRUD。
+- `platform.spec.ts`：注册校验与注册、三角色登录、越权 403、模型配置持久化、安全退出、Text-to-Flow、独立节点与协作配置、SSE 执行和日志、模板预览/点赞/Fork、教师发布课题、学生提交、原画布回滚后的快照试跑、分项评分及学生反馈。
+- 验证管理员 3 张、教务 4 张图表已初始化 ECharts，并核验后端真实统计接口；24 个视图由上述场景覆盖。
+
+### 3.4 真实 MySQL 8.0 验收
+
+```powershell
+cd flowmind-backend
+./scripts/test_mysql.ps1 -MySqlBin 'D:\MYSQL\MySQL Server 8.0\bin'
+```
+
+脚本仅启动自己的本机临时 MySQL 8.0 实例和随机 `flowmind_acceptance_<UUID>` 库，不改动既有 MySQL 服务、账号或 `flowmind_db`。执行完毕自动关闭实例、恢复进程环境变量并清理自己的临时目录。
+
+`MySqlAcceptanceTest` 仅在指定 `FLOWMIND_MYSQL_TEST_URL` 时启用；默认 `mvn clean test` 跳过此可选套件。它拒绝非 MySQL、非随机验收库名或非空库；读取权威 SQL，仅去掉固定建库/选库语句，保留生产 DDL、JSON 类型、索引、外键及种子数据。覆盖 8 表/11 JSON 字段/级联约束、真实 JSON_CONTAINS 协作检索、主从保存与回滚、SSE/同步运行、Fork、作业快照隔离、教师试跑与评分、两类统计和退出黑名单。
+
+### 3.5 模型配置与真实传输之间的回归
+
+`WorkflowEngineAndMarketTest` 通过管理员 HTTP 接口保存配置，再执行真实引擎。使用本机 HTTP SSE 服务断言实际目标路径、Authorization、模型名称、usage 和审计通道；同一运行实例上切换 DeepSeek/Qwen/本地通道，验证无需重启。有 Key 且禁用降级时模拟 503，必须记录 FAILED，不能悄悄改用本地结果；启用降级时允许回退，无 Key 时保留离线能力。这些测试无需付费 API Key。

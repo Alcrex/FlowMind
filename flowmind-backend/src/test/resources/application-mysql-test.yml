@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: ${FLOWMIND_MYSQL_TEST_URL}
+    username: ${FLOWMIND_MYSQL_TEST_USER:root}
+    password: ${FLOWMIND_MYSQL_TEST_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: never
+flowmind:
+  redis-enabled: false
+  llm:
+    active-provider: MOCK_LOCAL
+    mock-chunk-delay-ms: 0
