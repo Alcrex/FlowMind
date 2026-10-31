@@ -1,0 +1,8 @@
+flowmind-backend/target/
+flowmind-frontend/node_modules/
+flowmind-frontend/dist/
+flowmind-frontend/test-results/
+flowmind-frontend/playwright-report/
+*.log
+.env.local
+.idea/
