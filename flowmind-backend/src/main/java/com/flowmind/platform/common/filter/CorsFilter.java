@@ -2,6 +2,7 @@ package com.flowmind.platform.common.filter;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.cors.*;
@@ -11,7 +12,7 @@ import java.io.IOException;
 import java.util.*;
 
 @Component
-@Order(1)
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class CorsFilter extends OncePerRequestFilter {
     private final CorsConfiguration config = new CorsConfiguration();
     public CorsFilter(@Value("${flowmind.allowed-origins}") String origins) {
