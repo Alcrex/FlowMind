@@ -1,0 +1,20 @@
+<script setup lang="ts">
+import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { engineApi, type ExecRecord, type RecordQuery } from '@/api/engineAndMarketApi'
+import { formatTime } from '@/api/types'
+import './engine.css'
+const router = useRouter(), rows = ref<ExecRecord[]>([]), total = ref(0), loading = ref(false), error = ref('')
+const dates = ref<[string,string]>(), query = reactive<RecordQuery>({ pageNum: 1, pageSize: 10 })
+let sequence = 0
+async function load(reset = false) {
+  if (reset) query.pageNum = 1
+  if (query.minDuration != null && query.maxDuration != null && query.minDuration > query.maxDuration) { error.value = '最短耗时不能大于最长耗时'; return }
+  const current = ++sequence; loading.value = true; error.value = ''
+  try { const page = await engineApi.records({ ...query, execStatus: query.execStatus || undefined, triggerMode: query.triggerMode || undefined, startTime: dates.value?.[0], endTime: dates.value?.[1] }); if (current === sequence) { rows.value = page.records; total.value = page.total } }
+  catch { if (current === sequence) error.value = '查询失败，请重试' } finally { if (current === sequence) loading.value = false }
+}
+function reset() { Object.keys(query).forEach(k => delete (query as unknown as Record<string,unknown>)[k]); Object.assign(query,{ pageNum:1,pageSize:10 }); dates.value = undefined; void load() }
+onMounted(() => load())
+</script>
+<template><div class="engine-heading"><div><span class="eyebrow">EXECUTION HISTORY / 运行记录</span><h1>每次运行，都有迹可循</h1><p>按工作流、状态、模式、耗时与时间范围组合筛选运行记录。</p></div><el-button @click="load()">刷新</el-button></div><section class="engine-panel"><el-form class="engine-filter" inline @submit.prevent="load(true)"><el-form-item label="工作流 ID"><el-input-number v-model="query.workflowId" :min="1" :controls="false" placeholder="不限"/></el-form-item><el-form-item label="状态"><el-select v-model="query.execStatus" clearable placeholder="全部状态"><el-option v-for="s in ['SUCCESS','FAILED','RUNNING']" :key="s" :value="s" :label="s"/></el-select></el-form-item><el-form-item label="模式"><el-select v-model="query.triggerMode" clearable placeholder="全部模式"><el-option v-for="s in ['SANDBOX','TEACHER_REVIEW','TEMPLATE_TEST']" :key="s" :value="s" :label="s"/></el-select></el-form-item><el-form-item label="最短 ms"><el-input-number v-model="query.minDuration" :min="0" :controls="false"/></el-form-item><el-form-item label="最长 ms"><el-input-number v-model="query.maxDuration" :min="0" :controls="false"/></el-form-item><el-form-item label="开始时间"><el-date-picker v-model="dates" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" start-placeholder="起始时间" end-placeholder="结束时间"/></el-form-item><el-form-item><el-button type="primary" native-type="submit">查询</el-button><el-button @click="reset">重置</el-button></el-form-item></el-form><el-alert v-if="error" :title="error" type="error" :closable="false"/><el-table v-loading="loading" :data="rows" empty-text="暂无符合条件的运行记录"><el-table-column prop="execNo" label="流水号" min-width="230" show-overflow-tooltip/><el-table-column prop="wfName" label="工作流" min-width="170"/><el-table-column prop="execStatus" label="状态" width="110"><template #default="{ row }"><el-tag :type="row.execStatus === 'SUCCESS' ? 'success' : row.execStatus === 'FAILED' ? 'danger' : 'warning'">{{ row.execStatus }}</el-tag></template></el-table-column><el-table-column prop="triggerMode" label="触发模式" min-width="140"/><el-table-column prop="totalTokens" label="Tokens"/><el-table-column prop="durationMs" label="耗时 ms"/><el-table-column label="开始时间" min-width="180"><template #default="{ row }">{{ formatTime(row.startedAt) }}</template></el-table-column><el-table-column label="操作" width="95"><template #default="{ row }"><el-button link type="primary" @click="router.push(`/engine/records/${row.id}`)">查看明细</el-button></template></el-table-column></el-table><div class="engine-pagination"><el-pagination v-model:current-page="query.pageNum" v-model:page-size="query.pageSize" :total="total" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next" @current-change="load()" @size-change="load(true)"/></div></section></template>
