@@ -16,6 +16,7 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 import org.springframework.web.util.UriComponentsBuilder;
 import java.io.IOException;
 import java.util.*;
+import java.util.Base64;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -56,7 +57,12 @@ public class CollabWebSocketHandler extends TextWebSocketHandler implements Hand
             if (room == null) room = new ConcurrentHashMap<>();
             boolean first = room.isEmpty(); room.put(session.getId(), session);
             send(session, frame(session, "CONNECTED", Map.of("sessionId", session.getId())));
-            if (first) send(session, frame(session, "GRAPH_INIT", workflows.detail(id, user(session))));
+            if (first) {
+                var detail = workflows.detail(id, user(session));
+                send(session, frame(session, "GRAPH_INIT", Map.of(
+                    "workflow", detail.workflow(), "nodes", detail.nodes(), "edges", detail.edges(),
+                    "yjsState", detail.yjsState() == null ? "" : detail.yjsState())));
+            }
             else broadcast(room, frame(session, "SYNC_REQUEST", Map.of("targetSessionId", session.getId())), session.getId());
             presence(session, room); return room;
         });
@@ -73,7 +79,7 @@ public class CollabWebSocketHandler extends TextWebSocketHandler implements Hand
             workflows.requireEdit(roomId(session), current);
             JsonNode incoming = json.readTree(message.getPayload());
             String type = incoming.path("type").asText(); JsonNode payload = incoming.path("payload");
-            if (!Set.of("CURSOR_MOVE", "GRAPH_DELTA", "YJS_UPDATE", "SYNC_REQUEST").contains(type)) { session.close(CloseStatus.BAD_DATA); return; }
+            if (!Set.of("CURSOR_MOVE", "GRAPH_DELTA", "YJS_UPDATE", "YJS_STATE", "SYNC_REQUEST").contains(type)) { session.close(CloseStatus.BAD_DATA); return; }
             if ("CURSOR_MOVE".equals(type) && (!payload.path("x").isNumber() || !payload.path("y").isNumber()
                     || !Double.isFinite(payload.path("x").asDouble()) || !Double.isFinite(payload.path("y").asDouble()))) {
                 session.close(CloseStatus.BAD_DATA); return;
@@ -84,7 +90,14 @@ public class CollabWebSocketHandler extends TextWebSocketHandler implements Hand
                 try { workflows.requireEdit(roomId(peer), authenticator.authenticate((String) peer.getAttributes().get("token"))); }
                 catch (BusinessException ex) { peer.close(CloseStatus.POLICY_VIOLATION); }
             }
-            if ("YJS_UPDATE".equals(type) && !payload.path("update").isTextual()) { session.close(CloseStatus.BAD_DATA); return; }
+            if (("YJS_UPDATE".equals(type) || "YJS_STATE".equals(type)) && !payload.path("update").isTextual()) { session.close(CloseStatus.BAD_DATA); return; }
+            if ("YJS_STATE".equals(type)) {
+                byte[] state;
+                try { state = Base64.getDecoder().decode(payload.path("update").asText()); }
+                catch (IllegalArgumentException ex) { session.close(CloseStatus.BAD_DATA); return; }
+                workflows.saveYjsState(roomId(session), state, current);
+                return;
+            }
             var outgoing = frame(session, type, payload);
             if (payload.hasNonNull("targetSessionId") && "YJS_UPDATE".equals(type)) {
                 var target = room.get(payload.path("targetSessionId").asText()); if (target != null) send(target, outgoing);

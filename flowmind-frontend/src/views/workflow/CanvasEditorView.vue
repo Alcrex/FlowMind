@@ -21,7 +21,7 @@ type EditorNode = Node<CanvasNode> & { selected?: boolean }
 type EditorEdge = Edge & { selected?: boolean }
 const flowNodes = shallowRef<EditorNode[]>([]), flowEdges = shallowRef<EditorEdge[]>([])
 const loading = ref(false), saving = ref(false), failed = ref(false), ready = ref(false)
-const selectedKey = ref<string>(), drawer = ref(false), collabOpen = ref(false), stage = ref<HTMLElement>()
+const selectedKey = ref<string>(), drawer = ref(false), collabOpen = ref(false), stage = ref<HTMLElement>(), generationMode = ref('')
 const settingsOpen = ref(false)
 const metadata = reactive({ wfName: '', description: '', isPublic: 0 })
 let socket: CollabSocket | undefined, applying = false, generation = 0
@@ -64,7 +64,9 @@ async function load() {
   try {
     const result = await workflowApi.detail(id.value)
     if (current !== generation) return
-    store.workflow = result.workflow; renderGraph(result.nodes, result.edges)
+    store.workflow = result.workflow
+    generationMode.value = result.generationMode === 'MODEL' ? '模型生成' : result.generationMode === 'RULE' ? '规则生成' : ''
+    renderGraph(result.nodes, result.edges)
     if (!canEdit.value) { ready.value = true; return }
     socket = new CollabSocket(id.value, auth.token, {
       graph: (nodes, edges) => { const wasReady = ready.value; renderGraph(nodes, edges); if (wasReady) store.dirty = true },
@@ -73,7 +75,7 @@ async function load() {
       status: (connected, synchronized) => { store.connected = connected; ready.value = synchronized },
       membersChanged: ids => { if (store.workflow) store.workflow.collaboratorIds = ids },
       revoked: () => { ElMessage.info('协作权限或登录状态已变更'); void load() },
-      refresh: () => { ready.value = false; ElMessage.info('工作流版本或协作权限已更新，正在重新加载'); void load() }
+      refresh: () => { ready.value = false; socket?.dropState(); socket?.close(); socket = undefined; ElMessage.info('工作流版本或协作权限已更新，正在重新加载'); void load() }
     })
   } catch { failed.value = true } finally { if (current === generation) loading.value = false }
 }
@@ -160,9 +162,9 @@ function openSandbox() {
 function beforeUnload(event: BeforeUnloadEvent) { if (store.dirty) { event.preventDefault(); event.returnValue = '' } }
 window.addEventListener('beforeunload', beforeUnload)
 onBeforeRouteLeave(async () => !store.dirty || await ElMessageBox.confirm('画布尚有未保存的变更，确认离开？', '未保存变更', { type: 'warning', confirmButtonText: '离开', cancelButtonText: '继续编辑' }).then(() => true).catch(() => false))
-onBeforeUnmount(() => { generation++; socket?.close(); store.reset(); window.removeEventListener('beforeunload', beforeUnload) })
+onBeforeUnmount(() => { generation++; socket?.flushState(); socket?.close(); store.reset(); window.removeEventListener('beforeunload', beforeUnload) })
 </script>
-<template><section v-loading="loading" class="editor-page"><div class="editor-heading"><div class="editor-title"><el-button :icon="Back" circle @click="router.push('/workflows')"/><div><h2>{{ store.workflow?.wfName ?? '工作流画布' }} <el-tag size="small" effect="plain">{{ store.workflow?.versionTag }}</el-tag></h2><p><span :class="['status-dot', { offline: !store.connected }]"/>{{ canEdit ? (store.connected ? '协同已连接' : '协同连接中 / 已断开') : '只读预览' }}<span class="dirty-label">{{ store.dirty ? '· 有未保存变更' : '· 已保存' }}</span></p></div></div><div class="editor-actions"><el-button v-if="canEdit" :icon="Setting" :disabled="!ready" @click="openSettings">设置</el-button><el-button v-if="canEdit" :icon="User" @click="collabOpen = true">协作 {{ store.members.length }}</el-button><el-button v-if="canEdit" :icon="Clock" @click="router.push(`/workflow/${id}/versions`)">版本</el-button><el-button v-if="canEdit" :disabled="!ready" @click="save(true)">保存新版本</el-button><el-button v-if="canEdit" type="primary" :icon="Check" :loading="saving" :disabled="!ready" @click="save()">保存画布</el-button><el-button type="primary" :icon="VideoPlay" :disabled="!ready || saving" @click="openSandbox">运行调试</el-button></div></div>
+<template><section v-loading="loading" class="editor-page"><div class="editor-heading"><div class="editor-title"><el-button :icon="Back" circle @click="router.push('/workflows')"/><div><h2>{{ store.workflow?.wfName ?? '工作流画布' }} <el-tag size="small" effect="plain">{{ store.workflow?.versionTag }}</el-tag> <el-tag v-if="generationMode" size="small">{{ generationMode }}</el-tag></h2><p><span :class="['status-dot', { offline: !store.connected }]"/>{{ canEdit ? (store.connected ? '协同已连接' : '协同连接中 / 已断开') : '只读预览' }}<span class="dirty-label">{{ store.dirty ? '· 有未保存变更' : '· 已保存' }}</span></p></div></div><div class="editor-actions"><el-button v-if="canEdit" :icon="Setting" :disabled="!ready" @click="openSettings">设置</el-button><el-button v-if="canEdit" :icon="User" @click="collabOpen = true">协作 {{ store.members.length }}</el-button><el-button v-if="canEdit" :icon="Clock" @click="router.push(`/workflow/${id}/versions`)">版本</el-button><el-button v-if="canEdit" :disabled="!ready" @click="save(true)">保存新版本</el-button><el-button v-if="canEdit" type="primary" :icon="Check" :loading="saving" :disabled="!ready" @click="save()">保存画布</el-button><el-button type="primary" :icon="VideoPlay" :disabled="!ready || saving" @click="openSandbox">运行调试</el-button></div></div>
 <el-alert v-if="failed" type="error" title="画布加载失败" :closable="false"><el-button text @click="load">重试</el-button></el-alert><div class="editor-body"><aside v-if="canEdit" class="node-library"><p class="eyebrow">NODE LIBRARY</p><h3>节点工具箱</h3><p class="muted">拖入画布，开始连接</p><button v-for="spec in nodeTypes" :key="spec.type" class="node-palette-item" :draggable="ready" :disabled="!ready" @dragstart="drag($event, spec.type)" @click="addNode(spec.type)"><span :style="{ color: spec.color, background: spec.color + '15' }">{{ spec.type.slice(0, 2) }}</span><div><strong>{{ spec.label }}</strong><small>{{ spec.hint }}</small></div><el-icon><Plus /></el-icon></button><div class="canvas-tip">双击节点配置参数<br>选中节点或连线后点击删除<br>滚轮缩放 · 拖动画布平移</div><el-button :icon="Delete" :disabled="!ready" @click="removeSelected">删除选中元素</el-button></aside>
 <div ref="stage" class="canvas-stage" @drop="drop" @dragover.prevent @pointermove="move"><VueFlow id="workflow-editor" v-model:nodes="flowNodes" v-model:edges="flowEdges" :nodes-draggable="!!canEdit && ready" :nodes-connectable="!!canEdit && ready" :elements-selectable="true" :delete-key-code="null" :min-zoom="0.15" :max-zoom="2" fit-view-on-init @connect="connect" @node-double-click="({ node }) => { selectedKey = node.id; drawer = true }"><template #node-workflow="nodeProps"><WorkflowNode :data="nodeProps.data" :selected="nodeProps.selected"/></template><Background :gap="22" pattern-color="#d4ddd7"/><Controls/><MiniMap :node-color="n => nodeTypes.find(t => t.type === n.data?.nodeType)?.color ?? '#888'"/></VueFlow>
 <div class="canvas-caption">{{ store.nodes.length }} 个节点 <span>·</span> {{ store.edges.length }} 条连线</div><div class="cursor-layer"><div v-for="cursor in cursorStyles" :key="cursor.userId" class="remote-cursor" :style="{ left: cursor.left, top: cursor.top, color: cursor.color }"><svg width="20" height="24" viewBox="0 0 20 24"><path d="M2 2 L17 13 L10 14 L7 21 Z" fill="currentColor" stroke="white" stroke-width="1.5"/></svg><span :style="{ background: cursor.color }">{{ cursor.realName }}</span></div></div></div></div>

@@ -11,6 +11,7 @@ interface Callbacks {
   membersChanged: (ids: number[]) => void
   revoked: () => void
 }
+interface InitPayload extends WorkflowDetail { yjsState?: string }
 function encode(bytes: Uint8Array) { let value = ''; for (const b of bytes) value += String.fromCharCode(b); return btoa(value) }
 function decode(value: string) { return Uint8Array.from(atob(value), c => c.charCodeAt(0)) }
 
@@ -26,10 +27,15 @@ export class CollabSocket {
   private retry = 0
   private reconnectTimer?: ReturnType<typeof setTimeout>
   private lastCursor = 0
+  private lastState = 0
+  private stateTimer?: ReturnType<typeof setTimeout>
   private sessionId = ''
   constructor(private workflowId: number, private token: string, private callbacks: Callbacks) {
     this.doc.on('update', (update: Uint8Array, origin: unknown) => {
-      if (origin !== 'remote') this.send('YJS_UPDATE', { update: encode(update) })
+      if (origin !== 'remote') {
+        this.send('YJS_UPDATE', { update: encode(update) })
+        this.scheduleState()
+      }
       this.emitGraph()
     })
     this.connect()
@@ -49,6 +55,7 @@ export class CollabSocket {
     socket.onclose = event => {
       this.ready = false; this.callbacks.status(false, false); this.callbacks.presence([])
       if (!this.stopped && event.code === 1008) this.callbacks.revoked()
+      if (!this.stopped && event.code === 1012) { this.callbacks.refresh(); return }
       if (!this.stopped && event.code !== 1008 && event.code !== 1007) this.reconnectTimer = setTimeout(() => this.connect(), Math.min(1000 * 2 ** this.retry++, 10000))
     }
     socket.onerror = () => this.callbacks.status(false, false)
@@ -57,14 +64,18 @@ export class CollabSocket {
     const payload = message.payload
     if (message.type === 'CONNECTED') this.sessionId = String(payload.sessionId)
     if (message.type === 'GRAPH_INIT') {
-      const detail = payload as unknown as WorkflowDetail
-      if (!this.initialized) this.setGraph(detail.nodes, detail.edges)
+      const detail = payload as unknown as InitPayload
+      if (!this.initialized) {
+        if (detail.yjsState) Y.applyUpdate(this.doc, decode(detail.yjsState), 'remote')
+        else this.setGraph(detail.nodes, detail.edges)
+      }
       this.initialized = true; this.ready = true; this.callbacks.status(true, true)
     } else if (message.type === 'SYNC_REQUEST') {
       if (this.initialized) this.send('YJS_UPDATE', { update: encode(Y.encodeStateAsUpdate(this.doc)), targetSessionId: payload.targetSessionId })
     } else if (message.type === 'YJS_UPDATE') {
       Y.applyUpdate(this.doc, decode(String(payload.update)), 'remote')
       this.initialized = true; this.ready = true; this.callbacks.status(true, true)
+      this.scheduleState()
     } else if (message.type === 'PRESENCE_SYNC') {
       this.callbacks.presence(message.payload as unknown as Presence[])
     } else if (message.type === 'CURSOR_MOVE') {
@@ -93,6 +104,17 @@ export class CollabSocket {
   setGraph(nodes: CanvasNode[], edges: CanvasEdge[]) {
     this.doc.transact(() => { this.updateMap(this.nodes, nodes); this.updateMap(this.edges, edges) }, 'local')
   }
+  private scheduleState() {
+    if (this.stateTimer) return
+    const wait = Math.max(0, 2000 - (Date.now() - this.lastState))
+    this.stateTimer = setTimeout(() => { this.stateTimer = undefined; this.flushState() }, wait)
+  }
+  dropState() { clearTimeout(this.stateTimer); this.stateTimer = undefined }
+  flushState() {
+    if (!this.initialized) return
+    this.lastState = Date.now()
+    this.send('YJS_STATE', { update: encode(Y.encodeStateAsUpdate(this.doc)) })
+  }
   cursor(x: number, y: number) {
     const now = performance.now()
     if (!this.ready || now - this.lastCursor < 40) return
@@ -102,6 +124,6 @@ export class CollabSocket {
     if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify({ type, workflowId: this.workflowId, payload, timestamp: Date.now(), sessionId: this.sessionId }))
   }
   close() {
-    this.stopped = true; clearTimeout(this.reconnectTimer); this.socket?.close(); this.doc.destroy()
+    this.stopped = true; clearTimeout(this.reconnectTimer); clearTimeout(this.stateTimer); this.socket?.close(); this.doc.destroy()
   }
 }

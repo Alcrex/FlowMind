@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import * as echarts from 'echarts'
+type Chart = import('echarts/core').EChartsType
 import { engineApi, type ExecDetail } from '@/api/engineAndMarketApi'
 import { formatTime } from '@/api/types'
 import './engine.css'
 const route = useRoute(), router = useRouter(), detail = ref<ExecDetail>(), loading = ref(false), error = ref(''), chartElement = ref<HTMLDivElement>()
-let chart: echarts.ECharts | undefined, observer: ResizeObserver | undefined
+let chart: Chart | undefined, observer: ResizeObserver | undefined
 function dispose() { observer?.disconnect(); chart?.dispose(); chart = undefined }
 async function load() {
   loading.value = true; error.value = ''; dispose(); detail.value = undefined
   try {
     detail.value = await engineApi.detail(Number(route.params.id)); await nextTick()
     if (chartElement.value) {
-      chart = echarts.init(chartElement.value)
+      chart = (await import('@/utils/chartCore')).initBar(chartElement.value)
       let elapsed = 0; const offsets = detail.value.nodeLogs.map(n => { const value = elapsed; elapsed += n.costMs; return value })
       chart.setOption({ tooltip: { trigger:'axis', axisPointer: { type:'shadow' } }, grid:{ left:130,right:35,bottom:45,top:20 },
         xAxis:{ type:'value',name:'ms' },yAxis:{ type:'category',inverse:true,data:detail.value.nodeLogs.map(n => n.nodeName) },

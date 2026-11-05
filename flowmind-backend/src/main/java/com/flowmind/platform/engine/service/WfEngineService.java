@@ -87,7 +87,7 @@ public class WfEngineService {
     public WorkflowDetailVO textToFlow(TextToFlowReqDTO request, LoginUser user) {
         String prompt = request.getPrompt().strip(); String lower = prompt.toLowerCase(Locale.ROOT);
         var create = new WorkflowCreateDTO(); create.setWfName(prompt.substring(0,Math.min(80,prompt.length())));
-        create.setDescription(prompt); create.setCategory(request.getCategory()); create.setTags("AI生成"); create.setIsPublic(0);
+        create.setDescription(prompt); create.setCategory(request.getCategory()); create.setTags("RULE"); create.setIsPublic(0);
         var created = workflows.create(create,user);
         var nodes = new ArrayList<CanvasSaveDTO.NodeDTO>(); var edges = new ArrayList<CanvasSaveDTO.EdgeDTO>();
         nodes.add(node("node_input_1","INPUT",80,220,Map.of("variables",List.of(Map.of("name","text","type","string","required",true)))));
@@ -117,9 +117,10 @@ public class WfEngineService {
         if (falseBranch!=null) edges.add(edge(falseBranch,"node_output_1","default",edges.size()));
         var save = new CanvasSaveDTO(); save.setWfName(create.getWfName()); save.setDescription(prompt); save.setIsPublic(0);
         save.setNodes(nodes); save.setEdges(edges); save.setCreateSnapshot(true); save.setNewVersionTag("v1.0.1");
-        var result = workflows.saveCanvas(created.workflow().getId(),save,user);
-        sorter.sortAndValidate(result.nodes(),result.edges());
-        log.info("Generated workflow {} for user {}",result.workflow().getId(),user.id()); return result;
+        var saved = workflows.saveCanvas(created.workflow().getId(),save,user);
+        sorter.sortAndValidate(saved.nodes(),saved.edges());
+        log.info("Generated workflow {} for user {}",saved.workflow().getId(),user.id());
+        return new WorkflowDetailVO(saved.workflow(), saved.nodes(), saved.edges(), "RULE", saved.yjsState());
     }
     private boolean contains(String text, String... terms) { return Arrays.stream(terms).anyMatch(text::contains); }
     private CanvasSaveDTO.NodeDTO node(String key,String type,double x,double y,Map<String,Object> config) {

@@ -4,7 +4,7 @@ export type NodeType = 'INPUT' | 'KNOWLEDGE' | 'LLM' | 'CODE' | 'CONDITION' | 'O
 export interface CanvasNode { id?: number; elementKey: string; nodeType: NodeType; labelName: string; positionJson: { x: number; y: number }; configJson: Record<string, unknown> }
 export interface CanvasEdge { id?: number; elementKey: string; labelName?: string; sourceKey: string; targetKey: string; sourceHandle: string }
 export interface Workflow { id: number; wfCode: string; wfName: string; description?: string; category: string; tags?: string; creatorId: number; creatorName: string; collaboratorIds: number[]; isPublic: number; nodeCount: number; edgeCount: number; forkCount: number; likeCount: number; versionTag: string; createdAt: string; updatedAt: string }
-export interface WorkflowDetail { workflow: Workflow; nodes: CanvasNode[]; edges: CanvasEdge[] }
+export interface WorkflowDetail { workflow: Workflow; nodes: CanvasNode[]; edges: CanvasEdge[]; generationMode?: 'RULE' | 'MODEL' | null; yjsState?: string | null }
 export interface Page<T> { records: T[]; total: number; pageNum: number; pageSize: number }
 export interface WorkflowQuery { keyword?: string; category?: string; isPublic?: number; minNodeCount?: number; maxNodeCount?: number; scope: string; startTime?: string; endTime?: string; pageNum: number; pageSize: number }
 export interface CreateWorkflow { wfName: string; description: string; category: string; tags: string; isPublic: number }

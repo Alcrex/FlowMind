@@ -67,7 +67,7 @@
   1. 注册密码经 `BCryptPasswordEncoder` 加密存储；
   2. 登录返回有效 JWT；
   3. 调用 `/api/v1/auth/logout` 后原 JWT 立即失效（返回 `40102`）；
-  4. 请求体包含 `"drop table"` 等敏感词时被 `SensitiveAndXssFilter` 拦截（返回 `40009`）并写入 `sys_model_audit_log`。
+  4. 请求体包含默认敏感词 `违法违禁` 时被 `SensitiveAndXssFilter` 拦截（返回 `40009`）并写入 `sys_model_audit_log`。简介里的 `drop table` 可以保存。
 
 ### TASK-010：管理员用户管理、算力配额充值、模型配置与大屏统计后端接口
 - **负责人**：李俊豪
@@ -192,7 +192,7 @@
   - `src/views/admin/BigScreenMonitorView.vue` (`VIEW-22`)
   - `src/views/admin/UserAndRbacView.vue` (`VIEW-23`)
   - `src/views/admin/ModelAndAuditLogView.vue` (`VIEW-24`)
-- **验收标准**：大屏渲染 ECharts 算力流向桑基图、班级排行与 24h 趋势图；用户管理支持多条件查询、角色切换与算力充值；模型与审计页支持配置 API Key/敏感词并多条件查询安全日志。
+- **验收标准**：大屏渲染 ECharts 算力流向桑基图、班级排行与 24 小时调用热力图；用户管理支持多条件查询、角色切换与算力充值；模型与审计页支持配置 API Key/敏感词并多条件查询安全日志。
 
 ### TASK-006：前端个人工作台、工作流多条件列表、版本历史与协同管理视图开发（4 个视图）
 - **负责人**：顾峰鸣

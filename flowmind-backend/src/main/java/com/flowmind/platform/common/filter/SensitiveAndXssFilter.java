@@ -6,6 +6,8 @@ import com.flowmind.platform.common.security.*;
 import com.flowmind.platform.system.service.SysAuditAndConfigService;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -14,6 +16,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 /** Reads JSON once and replays the exact bytes for MVC. JSON escapes cannot bypass text inspection. */
+@Slf4j
 public class SensitiveAndXssFilter extends OncePerRequestFilter {
     private static final Pattern XSS = Pattern.compile("(?is)<\\s*(script|iframe|object|embed)\\b|javascript\\s*:|<[^>]+\\bon[a-z]+\\s*=");
     private final SysAuditAndConfigService audit;
@@ -27,7 +30,17 @@ public class SensitiveAndXssFilter extends OncePerRequestFilter {
         var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof LoginUser p) user = p;
         boolean configWrite = "PUT".equals(req.getMethod()) && "/api/v1/admin/models/config".equals(req.getRequestURI()) && user != null && "ADMIN".equals(user.roleType());
-        List<String> words = audit.sensitiveWords();
+        List<String> words;
+        try {
+            words = audit.sensitiveWords();
+        } catch (DataAccessException ex) {
+            log.error("Cannot load sensitive-word configuration from database", ex);
+            res.setStatus(ErrorCode.INTERNAL_ERROR.getHttpStatus());
+            res.setContentType("application/json;charset=UTF-8");
+            json.writeValue(res.getOutputStream(), Result.failure(ErrorCode.INTERNAL_ERROR,
+                "数据库连接或查询失败，请检查数据库配置后重试"));
+            return;
+        }
         for (var values : req.getParameterMap().values()) for (String value : values) {
             if (blocked(value, words)) { reject(req, res, user); return; }
         }
@@ -61,7 +74,24 @@ public class SensitiveAndXssFilter extends OncePerRequestFilter {
     }
     private boolean blocked(String text, List<String> words) {
         String normalized = normalize(text);
-        return XSS.matcher(normalized).find() || words.stream().anyMatch(w -> normalized.contains(normalize(w)));
+        return XSS.matcher(normalized).find() || words.stream().map(this::normalize).anyMatch(word -> wordMatch(normalized, word));
+    }
+    /** English and digit phrases match a whole token. Chinese phrases keep substring matching. */
+    private boolean wordMatch(String text, String word) {
+        if (word.isBlank()) return false;
+        boolean ascii = word.chars().allMatch(c -> c < 128);
+        if (!ascii) return text.contains(word);
+        int from = 0;
+        while (from <= text.length() - word.length()) {
+            int at = text.indexOf(word, from);
+            if (at < 0) return false;
+            boolean left = at > 0 && Character.isLetterOrDigit(text.charAt(at - 1));
+            int end = at + word.length();
+            boolean right = end < text.length() && Character.isLetterOrDigit(text.charAt(end));
+            if (!left && !right) return true;
+            from = at + 1;
+        }
+        return false;
     }
     private String normalize(String value) { return Normalizer.normalize(value, Normalizer.Form.NFKC).replaceAll("\\s+", " ").toLowerCase(Locale.ROOT); }
     private void reject(HttpServletRequest req, HttpServletResponse res, LoginUser user) throws IOException {

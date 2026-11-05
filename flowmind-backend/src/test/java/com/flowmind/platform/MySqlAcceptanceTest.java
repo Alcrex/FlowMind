@@ -61,6 +61,43 @@ class MySqlAcceptanceTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND data_type='json'", Long.class)).isEqualTo(11);
     }
 
+    private void migrateYjsColumns() throws Exception {
+        try (var connection = Objects.requireNonNull(jdbc.getDataSource()).getConnection()) {
+            ScriptUtils.executeSqlScript(connection,
+                new EncodedResource(new org.springframework.core.io.FileSystemResource(
+                    "../sql/migrations/20261105_add_workflow_yjs.sql"), StandardCharsets.UTF_8));
+        }
+    }
+
+    @Test void legacyWorkflowSchemaUpgradePreservesDataAndRestoresQueries() throws Exception {
+        String admin = login("admin");
+        var original = jdbc.queryForMap("SELECT wf_name, node_count, edge_count FROM wf_workflow WHERE id=1");
+        long elements = jdbc.queryForObject("SELECT COUNT(*) FROM wf_node_edge WHERE workflow_id=1", Long.class);
+        jdbc.execute("ALTER TABLE wf_workflow DROP COLUMN yjs_state, DROP COLUMN yjs_version");
+        try {
+            mvc.perform(get("/api/v1/workflows/dashboard").header("Authorization", "Bearer " + admin))
+                .andExpect(status().isInternalServerError());
+            // A partially upgraded database must also be supported.
+            jdbc.execute("ALTER TABLE wf_workflow ADD COLUMN yjs_state MEDIUMBLOB DEFAULT NULL");
+            byte[] state = new byte[] {0, 1, 2, -1};
+            jdbc.update("UPDATE wf_workflow SET yjs_state=? WHERE id=1", state);
+            migrateYjsColumns();
+            assertThat(jdbc.queryForObject("SELECT yjs_version FROM wf_workflow WHERE id=1", Long.class)).isZero();
+            jdbc.update("UPDATE wf_workflow SET yjs_version=7 WHERE id=1");
+            migrateYjsColumns();
+            assertThat(jdbc.queryForObject("SELECT yjs_state FROM wf_workflow WHERE id=1", byte[].class)).isEqualTo(state);
+            assertThat(jdbc.queryForObject("SELECT yjs_version FROM wf_workflow WHERE id=1", Long.class)).isEqualTo(7);
+            assertThat(jdbc.queryForMap("SELECT wf_name, node_count, edge_count FROM wf_workflow WHERE id=1")).isEqualTo(original);
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM wf_node_edge WHERE workflow_id=1", Long.class)).isEqualTo(elements);
+            call(get("/api/v1/workflows/dashboard"), admin, null);
+            call(get("/api/v1/workflows"), admin, null);
+            call(get("/api/v1/market/templates"), null, null);
+        } finally {
+            migrateYjsColumns();
+            jdbc.update("UPDATE wf_workflow SET yjs_state=NULL, yjs_version=0 WHERE id=1");
+        }
+    }
+
     @Test void authenticationWorkflowEngineEducationAndAnalyticsUseRealMySql() throws Exception {
         String student = login("gufengming"), teacher = login("teacher_litian"), admin = login("admin");
         mvc.perform(get("/api/v1/admin/users").header("Authorization", "Bearer " + student)).andExpect(status().isForbidden());

@@ -103,12 +103,40 @@ class WorkflowEngineAndMarketTest {
         for (var row : detail.path("nodeLogs")) { statuses.put(row.path("nodeKey").asText(),row.path("stepStatus").asText()); types.add(row.path("nodeType").asText()); sum += row.path("tokenCost").asInt(); }
         assertThat(types).containsExactlyInAnyOrder("INPUT","CODE","CONDITION","KNOWLEDGE","LLM","OUTPUT");
         assertThat(statuses).containsEntry("node_llm_1","SUCCESS").containsEntry("node_llm_fallback","SKIPPED").containsEntry("node_output_1","SUCCESS");
-        assertThat(detail.path("record").path("finalOutput").path("report").asText()).contains("PreparedStatement");
+        assertThat(detail.path("record").path("finalOutput").path("report").asText()).contains("PreparedStatement").contains("来源：");
         assertThat(detail.path("record").path("totalTokens").asInt()).isEqualTo(sum).isPositive();
         assertThat(jdbc.queryForObject("SELECT token_quota FROM sys_user WHERE id=4",Integer.class)).isEqualTo(50000-sum);
         assertThat(jdbc.queryForObject("SELECT token_used FROM sys_user WHERE id=4",Integer.class)).isEqualTo(sum);
         assertThat(count("wf_exec_record")).isEqualTo(1); assertThat(count("wf_exec_node_log")).isEqualTo(canvas.path("nodes").size());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sys_model_audit_log WHERE module_name='ENGINE'",Long.class)).isEqualTo(1);
+    }
+    @Test void examplePromptsProduceDifferentRuleGraphs() throws Exception {
+        var knowledge = generate("输入 Java 代码，检索开发规约并生成安全审查报告");
+        var branch = generate("清洗输入文本，如果包含 Java 则检索知识库并回答，否则给出通用建议");
+        var report = generate("根据本周工作事项生成结构化周报");
+        assertThat(knowledge.path("generationMode").asText()).isEqualTo("RULE");
+        var reloaded = body(mvc.perform(get("/api/v1/workflows/" + knowledge.path("workflow").path("id").asLong()).header("Authorization", "Bearer " + token)).andReturn()).path("data");
+        assertThat(reloaded.path("generationMode").asText()).isEqualTo("RULE");
+        assertThat(typesOf(knowledge)).contains("KNOWLEDGE").doesNotContain("CONDITION", "CODE");
+        assertThat(typesOf(branch)).contains("CODE", "CONDITION", "KNOWLEDGE");
+        assertThat(typesOf(report)).containsExactlyInAnyOrder("INPUT", "LLM", "OUTPUT");
+        for (var canvas : List.of(knowledge, branch, report)) sorter.sortAndValidate(nodesOf(canvas), edgesOf(canvas));
+    }
+    private Set<String> typesOf(JsonNode canvas) { Set<String> types = new HashSet<>(); canvas.path("nodes").forEach(n -> types.add(n.path("nodeType").asText())); return types; }
+    private List<WfNodeEdge> nodesOf(JsonNode canvas) { var list = new ArrayList<WfNodeEdge>(); canvas.path("nodes").forEach(n -> list.add(node(n.path("elementKey").asText(), n.path("nodeType").asText()))); return list; }
+    private List<WfNodeEdge> edgesOf(JsonNode canvas) {
+        var list = new ArrayList<WfNodeEdge>();
+        canvas.path("edges").forEach(n -> { var e = edge(n.path("elementKey").asText(), n.path("sourceKey").asText(), n.path("targetKey").asText()); e.setSourceHandle(n.path("sourceHandle").asText("default")); list.add(e); });
+        return list;
+    }
+    @Test void knowledgeFilesReturnDifferentSources() throws Exception {
+        var base = new KnowledgeBase();
+        base.load();
+        String sql = base.retrieve("ALI_JAVA_SPEC", "SQL 注入", 2);
+        String vue = base.retrieve("VUE3", "Vue XSS", 2);
+        assertThat(sql).contains("ali-java-spec.md").contains("PreparedStatement").doesNotContain("vue3-spec.md");
+        assertThat(vue).contains("vue3-spec.md").doesNotContain("PreparedStatement");
+        assertThatThrownBy(() -> base.retrieve("MISSING", "SQL", 1)).isInstanceOf(BusinessException.class);
     }
     @Test void falseBranchPrunesKnowledgeAndKeepsSharedOutputAlive() throws Exception {
         long id = generatedId("如果是Java则检索规约后解答，否则回答一般问题");
@@ -276,7 +304,7 @@ class WorkflowEngineAndMarketTest {
             .contentType("application/json").content(json.writeValueAsString(Map.of(
                 "activeProvider", provider, "baseUrl", base, "apiKeyPlain", key,
                 "modelName", "configured-" + provider.toLowerCase(Locale.ROOT), "enableMockFallback", fallback,
-                "sensitiveWords", List.of("drop table")))))
+                "sensitiveWords", List.of("违法违禁")))))
             .andExpect(status().isOk()).andReturn());
         if (!key.isEmpty()) assertThat(response.toString()).doesNotContain(key);
     }

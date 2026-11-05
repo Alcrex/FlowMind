@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.Base64;
 
 @Slf4j
 @Service
@@ -103,8 +104,9 @@ public class WfWorkflowService {
     }
     private WorkflowDetailVO detail(WfWorkflow w) {
         var rows = elements.selectList(new LambdaQueryWrapper<WfNodeEdge>().eq(WfNodeEdge::getWorkflowId, w.getId()).orderByAsc(WfNodeEdge::getId));
+        String mode = "RULE".equals(w.getTags()) ? "RULE" : null;
         return new WorkflowDetailVO(summary(w), rows.stream().filter(e -> "NODE".equals(e.getElementType())).toList(),
-            rows.stream().filter(e -> "EDGE".equals(e.getElementType())).toList());
+            rows.stream().filter(e -> "EDGE".equals(e.getElementType())).toList(), mode, encodeState(w.getYjsState()));
     }
     @Transactional(rollbackFor = Exception.class)
     public WorkflowDetailVO create(WorkflowCreateDTO dto, LoginUser user) {
@@ -153,6 +155,7 @@ public class WfWorkflowService {
         var canvas = detail(w); ObjectNode snapshot = json.createObjectNode();
         snapshot.put("versionTag", w.getVersionTag()); snapshot.put("savedAt", LocalDateTime.now().toString()); snapshot.put("savedBy", user.id());
         snapshot.put("wfName", w.getWfName()); snapshot.put("description", w.getDescription());
+        snapshot.put("yjsState", encodeState(w.getYjsState()));
         snapshot.set("nodes", json.valueToTree(canvas.nodes())); snapshot.set("edges", json.valueToTree(canvas.edges()));
         snapshots.add(snapshot); w.setHistorySnapshotsJson(snapshots);
     }
@@ -191,7 +194,11 @@ public class WfWorkflowService {
         }
         w.setVersionTag(version); w.setNodeCount(selected.path("nodes").size()); w.setEdgeCount(selected.path("edges").size());
         w.setWfName(selected.path("wfName").asText(w.getWfName())); w.setDescription(selected.path("description").asText(""));
+        byte[] restored = decodeState(selected.path("yjsState").asText(""));
+        w.setYjsState(restored);
+        w.setYjsVersion((w.getYjsVersion() == null ? 0 : w.getYjsVersion()) + 1);
         w.setUpdatedAt(LocalDateTime.now()); workflows.updateById(w);
+        if (restored == null) workflows.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<WfWorkflow>().eq(WfWorkflow::getId, id).set(WfWorkflow::getYjsState, null));
         events.publishEvent(new AccessChanged(id, true)); log.info("Rolled back workflow {} to {}", id, version); return detail(w);
     }
     @Transactional(rollbackFor = Exception.class)
@@ -200,6 +207,7 @@ public class WfWorkflowService {
         var w = new WfWorkflow(); BeanUtils.copyProperties(source.workflow(), w);
         w.setId(null); w.setWfCode("WF-" + UUID.randomUUID()); w.setWfName(source.workflow().getWfName().substring(0, Math.min(120, source.workflow().getWfName().length())) + " 副本");
         w.setCreatorId(user.id()); w.setCollaboratorIds(List.of()); w.setIsPublic(0); w.setForkCount(0); w.setLikeCount(0);
+        w.setYjsState(null); w.setYjsVersion(0L);
         w.setHistorySnapshotsJson(json.createArrayNode()); w.setVersionTag("v1.0.0"); w.setCreatedAt(LocalDateTime.now()); w.setUpdatedAt(w.getCreatedAt()); workflows.insert(w);
         for (var row : java.util.stream.Stream.concat(source.nodes().stream(), source.edges().stream()).toList()) {
             var e = new WfNodeEdge(); BeanUtils.copyProperties(row, e); e.setWorkflowId(w.getId()); insertElement(e);
@@ -213,6 +221,22 @@ public class WfWorkflowService {
         for (Long member : unique) if (reads.activeUser(member) != 1) invalid("协作用户不存在或已禁用：" + member);
         w.setCollaboratorIds(unique); w.setUpdatedAt(LocalDateTime.now()); workflows.updateById(w);
         events.publishEvent(new AccessChanged(id, false)); return true;
+    }
+    @Transactional(rollbackFor = Exception.class)
+    public long saveYjsState(Long id, byte[] state, LoginUser user) {
+        if (state == null || state.length == 0 || state.length > 1_048_576) invalid("协同状态大小无效");
+        var w = lock(id); requireEdit(w, user);
+        long version = (w.getYjsVersion() == null ? 0 : w.getYjsVersion()) + 1;
+        w.setYjsState(state); w.setYjsVersion(version); w.setUpdatedAt(LocalDateTime.now());
+        workflows.updateById(w); return version;
+    }
+    private String encodeState(byte[] state) {
+        return state == null || state.length == 0 ? "" : Base64.getEncoder().encodeToString(state);
+    }
+    private byte[] decodeState(String value) {
+        if (!StringUtils.hasText(value)) return null;
+        try { return Base64.getDecoder().decode(value); }
+        catch (IllegalArgumentException ex) { return null; }
     }
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(Long id, LoginUser user) {

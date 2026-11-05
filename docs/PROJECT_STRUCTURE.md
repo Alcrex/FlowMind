@@ -61,7 +61,7 @@ flowmind-backend/
     │   │   │   └── config/
     │   │   │       ├── MybatisPlusConfig.java              # 分页插件配置
     │   │   │       ├── WebSocketConfig.java                # WebSocket 端点注册配置
-    │   │   │       └── OpenApiConfig.java                  # Knife4j / Swagger 接口文档配置
+    │   │   │       └── OpenApiConfig.java                  # springdoc-openapi 接口文档配置，入口 /doc.html
     │   │   │
     │   │   ├── system/                                     # 【子系统四：权限治理与监控大屏 - 负责人：李俊豪】
     │   │   │   ├── entity/
@@ -208,7 +208,7 @@ flowmind-frontend/
         ├── workflow/                                       # [顾峰鸣负责 - 5个]
         │   ├── WorkflowListView.vue                        # VIEW-05: 我的/协作工作流管理页 (多条件查询)
         │   ├── CanvasEditorView.vue                        # VIEW-06: Vue Flow 可视化画布与多人实时光标页
-        │   ├── NodeConfigDrawer.vue                        # VIEW-07: 节点配置与 Monaco 代码/提示词编辑视图
+        │   ├── NodeConfigDrawer.vue                        # VIEW-07: 节点配置，使用 Element Plus 输入框编辑代码与提示词
         │   ├── VersionHistoryView.vue                      # VIEW-08: 历史版本快照对比与一键回滚视图
         │   └── CollabManageModal.vue                       # VIEW-09: 协作成员邀请与在线状态管理视图
         ├── engine/                                         # [张誉诚负责 - 4个]

@@ -49,8 +49,8 @@
 
 ### 4.1 学生 / 创作者 (`STUDENT`)
 - **个人工作台與工作流管理**：查看待办实训任务、最近协同画布；对工作流进行多条件查询、创建、克隆、版本快照回滚。
-- **可视化节点拖拽与多人实时协同**：在 Vue Flow 画布中拖拽 6 类标准节点（`INPUT`、`LLM`、`CODE`、`KNOWLEDGE`、`CONDITION`、`OUTPUT`），配置 Monaco Editor 脚本与提示词；与同组同学实时同步鼠标彩色光标与节点位置变更。
-- **沙箱流式调试与一句话生成（Text-to-Flow）**：输入自然语言自动生成工作流拓扑；一键触发 DAG 引擎运行，通过 SSE 实时接收各节点流光高亮状态与大模型打字机流式输出。
+- **可视化节点拖拽与多人实时协同**：在 Vue Flow 画布中拖拽 6 类标准节点（`INPUT`、`LLM`、`CODE`、`KNOWLEDGE`、`CONDITION`、`OUTPUT`），在节点抽屉中配置脚本与提示词；与同组同学实时同步鼠标彩色光标与节点位置变更。关闭页面后，最近一次协同状态仍可恢复。
+- **沙箱流式调试与一句话生成（Text-to-Flow）**：按提示词中的关键词生成不同拓扑，页面标明“规则生成”；配置可用模型且返回合法图时标明“模型生成”。一键触发 DAG 引擎运行，通过 SSE 实时接收各节点状态与流式输出。
 - **模板广场与实训作业提交**：多条件检索公开模板并一键 Fork；将工作流画布快照绑定至教师发布的实训课题并提交实验报告。
 
 ### 4.2 指导教师 (`TEACHER`)
@@ -68,23 +68,22 @@
 ## 5. 技术栈与运行环境要求
 
 ### 5.1 后端技术栈 (`flowmind-backend`)
-- **语言与运行时**：Java 21 (开启虚拟线程 `spring.threads.virtual.enabled=true`)
+- **语言与运行时**：Java 21
 - **核心框架**：Spring Boot 3.3.5 (`spring-boot-starter-web`, `spring-boot-starter-websocket`, `spring-boot-starter-security`, `spring-boot-starter-validation`, `spring-boot-starter-aop`)
 - **持久层**：MyBatis-Plus 3.5.7 + MySQL Connector/J 8.3.0 + HikariCP
 - **缓存与会话**：Spring Data Redis (`StringRedisTemplate`) + Lettuce（支持本地内嵌/降级内存缓存以便无 Redis 环境快速单机测试，生产/联调使用 Redis 7.x）
-- **认证与工具**：`jjwt` (0.12.5)、`hutool-all` (5.8.28)、`lombok`、`springdoc-openapi-starter-webmvc-ui` (Knife4j 4.5.0)
+- **认证与工具**：`jjwt` 0.12.6、Lombok、`springdoc-openapi-starter-webmvc-ui` 2.6.0（接口文档入口 `/doc.html`）
 - **AI 与工作流引擎**：确定性 DAG 拓扑执行引擎（基于 Kahn 算法 + 策略模式节点执行器）+ 标准 OpenAI/DeepSeek/Qwen 兼容 HTTP/SSE 客户端（支持真实 API Key 调用及无 Key 时的智能流式沙箱降级模式，确保评测 100% 可运行）。
 
 ### 5.2 前端技术栈 (`flowmind-frontend`)
 - **核心底座**：Node.js $\ge 20.x$、Vue 3.5 + TypeScript 5.5 + Vite 5.4
 - **路由与状态**：Vue Router 4.4 + Pinia 2.2
-- **UI 与样式**：Element Plus 2.8 + `@element-plus/icons-vue` + TailwindCSS 3.4
+- **UI 与样式**：Element Plus 2.9 + `@element-plus/icons-vue`，样式写在各视图 CSS 中
 - **核心交互组件**：
   - `@vue-flow/core` + `@vue-flow/background` + `@vue-flow/controls` + `@vue-flow/minimap`（可视化工作流节点画布）
-  - `yjs` + 原生 WebSocket 协同状态适配器（多人实时光标与画布同步）
-  - `monaco-editor`（代码与提示词高亮编辑器）
-  - `echarts` 5.5（统计分析图表与监控大屏）
-  - `axios` + `@microsoft/fetch-event-source`（REST 请求拦截与 SSE 流式接收）
+  - `yjs` + 原生 WebSocket 协同状态适配器（多人实时光标与画布同步，状态定期写入 `wf_workflow.yjs_state`）
+  - `echarts` 5.6（统计分析图表、桑基图与 24 小时热力图）
+  - `axios` + `src/utils/sseClient.ts`（REST 请求拦截与 SSE 流式接收）
 
 ---
 

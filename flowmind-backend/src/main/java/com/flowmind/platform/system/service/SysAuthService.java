@@ -34,7 +34,7 @@ public class SysAuthService {
         if (users.selectCount(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, input.username())) > 0) throw new BusinessException(ErrorCode.USERNAME_EXISTS);
         var u = new SysUser();
         u.setUsername(input.username()); u.setPasswordHash(encoder.encode(input.password()));
-        u.setRealName(input.realName()); u.setRoleType(input.roleType()); u.setDeptClass(input.deptClass()); u.setEmail(input.email());
+        u.setRealName(input.realName()); u.setRoleType("STUDENT"); u.setDeptClass(input.deptClass()); u.setEmail(input.email());
         u.setTokenQuota(50000); u.setTokenUsed(0); u.setStatus(1);
         u.setCreatedAt(LocalDateTime.now()); u.setUpdatedAt(u.getCreatedAt());
         try { users.insert(u); } catch (DuplicateKeyException ex) { throw new BusinessException(ErrorCode.USERNAME_EXISTS); }

@@ -2,7 +2,7 @@ import { request } from '@/utils/request'
 import type { Page, Role, UserInfo } from './types'
 
 export interface SystemUser extends UserInfo { email?: string; avatarUrl?: string; status: number; lastLoginAt?: string; createdAt: string; updatedAt: string }
-export interface Registration { username: string; password: string; realName: string; roleType: 'STUDENT' | 'TEACHER'; deptClass: string; email?: string }
+export interface Registration { username: string; password: string; realName: string; deptClass: string; email?: string }
 export interface UserQuery { keyword?: string; roleType?: Role; deptClass?: string; status?: number; minQuota?: number; maxQuota?: number; pageNum: number; pageSize: number }
 export interface UserUpdate { roleType?: Role; deptClass?: string; status?: number; tokenQuota?: number; resetPassword?: boolean }
 export interface AuditQuery { username?: string; moduleName?: string; actionType?: string; modelProvider?: string; httpStatus?: number; startTime?: string; endTime?: string; pageNum: number; pageSize: number }

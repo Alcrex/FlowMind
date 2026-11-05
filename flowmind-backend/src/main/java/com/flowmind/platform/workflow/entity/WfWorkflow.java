@@ -25,6 +25,8 @@ public class WfWorkflow {
     private String versionTag;
     @TableField(typeHandler = JacksonTypeHandler.class)
     private JsonNode historySnapshotsJson;
+    private byte[] yjsState;
+    private Long yjsVersion;
     private Integer status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

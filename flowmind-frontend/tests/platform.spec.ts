@@ -56,6 +56,7 @@ test('registration, real login, RBAC, model settings, admin charts and safe logo
     await expect(page.locator('.el-table__row').filter({ hasText: 'MODEL_CONFIG' }).first()).toBeVisible()
     await page.goto('/admin/monitor')
     await expect(page.locator('[_echarts_instance_]')).toHaveCount(3)
+    await expect(page.locator('[aria-label="最近24小时模型调用热力图"]')).toHaveAttribute('data-series', 'heatmap')
     await ready(page)
   } finally { await call(page.request, admin, '/admin/models/config', 'PUT', original) }
   await page.getByRole('button', { name: '退出', exact: true }).click()
@@ -76,6 +77,7 @@ test('text-to-flow, standalone configuration, SSE execution, records and templat
     await page.getByRole('button', { name: '生成并打开画布' }).click()
     await expect(page).toHaveURL(/workflow\/editor\/\d+/)
     id = Number(page.url().split('/').at(-1))
+    await expect(page.getByText('规则生成', { exact: true })).toBeVisible()
     await expect(page.getByText('协同已连接', { exact: false })).toBeVisible()
     await page.goto(`/workflow/${id}/node/node_llm_1`)
     await expect(page.getByLabel('系统提示词')).toHaveValue(prompt)

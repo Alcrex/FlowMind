@@ -56,7 +56,7 @@
 - **关联视图**：`VIEW-24 ModelAndAuditLogView.vue`
 - **输入（多条件查询审计表）**：`username`、`moduleName`、`actionType`、`modelProvider`、`httpStatus`、`startTime`、`endTime`、`pageNum`、`pageSize`。
 - **处理流程**：
-  1. 管理员可配置系统默认大模型通道（`DEEPSEEK` / `QWEN` / `MOCK_LOCAL`）、API BaseURL、API Key 及敏感词词库（如 `["drop table", "rm -rf", "违法违禁词"]`）。
+  1. 管理员可配置系统默认大模型通道（`DEEPSEEK` / `QWEN` / `MOCK_LOCAL`）、API BaseURL、API Key 及敏感词词库。默认词是 `违法违禁`。英文词按整词匹配，避免误伤 “drop table” 这类技术讨论；中文词按包含匹配。
   2. 全局过滤器 `SensitiveAndXssFilter` 对所有寫请求（POST/PUT）载荷进行扫描，若命中敏感词则直接阻断请求，返回业务码 `40009`（"请求包含违规敏感词，已被安全过滤器拦截"），并自动写入一条 `action_type = 'SENSITIVE_BLOCK'` 的审计日志。
 - **验收标准**：在任意输入框或 AI 提示词中输入敏感词提交，接口必须拦截且在 `ModelAndAuditLogView.vue` 中立即查到该条拦截记录。
 
@@ -66,7 +66,7 @@
   1. 核心 KPI 卡片：总注册师生数、工作流总数、累计执行次数、全校已消耗总 Token 数。
   2. 算力流向桑基图（Sankey）：`学院/班级 -> 角色类型 -> 模型通道 (DeepSeek/Qwen/Mock)` 的 Token 消耗流转。
   3. 院系班级活跃排行榜（横向柱状图）：按工作流创建数与运行次数排名。
-  4. 24 小时 AI 调用与响应耗时趋势（双轴折线图）。
+  4. 24 小时 AI 调用与响应耗时热力图。学情分析页另有提交趋势折线图。
 
 ---
 
@@ -87,7 +87,7 @@
   1. `INPUT`（开始输入节点）：定义工作流入参变量列表（如 `query`, `codeSnippet`）。
   2. `LLM`（大模型调用节点）：配置模型通道、Temperature、System Prompt、User Prompt 模板（支持 `{{input.query}}` 变量占位符）。
   3. `KNOWLEDGE`（知识库检索节点）：配置检索关键词模板、预设知识片段库匹配规则与 TopK。
-  4. `CODE`（脚本处理节点）：内嵌 Monaco Editor，编写数据转换逻辑或正则提取规则。
+  4. `CODE`（脚本处理节点）：在节点配置抽屉中用文本框编写数据转换逻辑或正则提取规则。
   5. `CONDITION`（条件分支节点）：配置布尔判断表达式（如包含某关键词或长度大于阈值），拥有 `true` 和 `false` 两个输出锚点。
   6. `OUTPUT`（结束输出节点）：汇总并格式化前序节点的输出变量。
 - **处理流程**：用户拖拽节点、连线、在抽屉中修改配置后，点击“保存画布”批量全量覆写或增量更新从表 `wf_node_edge`，同时自动更新主表 `node_count` 与 `edge_count`。

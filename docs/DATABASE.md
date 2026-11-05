@@ -228,6 +228,8 @@ erDiagram
 | `like_count` | `INT` | 是 | `0` | 点赞次数 |
 | `version_tag` | `VARCHAR(32)` | 是 | `'v1.0.0'` | 当前版本号 |
 | `history_snapshots_json` | `JSON` | 否 | `NULL` | 历史版本快照数组 `[{versionTag, savedAt, savedBy, nodes, edges}]` |
+| `yjs_state` | `MEDIUMBLOB` | 否 | `NULL` | 当前画布的 Yjs 全量状态 |
+| `yjs_version` | `BIGINT` | 是 | `0` | 协同状态版本，每次覆盖加一 |
 | `status` | `TINYINT` | 是 | `1` | 状态：`1`-正常，`0`-已删除 |
 | `created_at` | `DATETIME` | 是 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `DATETIME` | 是 | `CURRENT_TIMESTAMP` | 更新时间 |
@@ -408,6 +410,8 @@ CREATE TABLE `wf_workflow` (
   `like_count` INT NOT NULL DEFAULT 0 COMMENT '点赞热度',
   `version_tag` VARCHAR(32) NOT NULL DEFAULT 'v1.0.0' COMMENT '当前版本号',
   `history_snapshots_json` JSON DEFAULT NULL COMMENT '历史版本快照JSON数组',
+  `yjs_state` MEDIUMBLOB DEFAULT NULL COMMENT '当前画布的 Yjs 全量状态',
+  `yjs_version` BIGINT NOT NULL DEFAULT 0 COMMENT '协同状态版本，每次覆盖加一',
   `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态: 1正常 0删除',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

@@ -69,9 +69,10 @@
   | `username` | String | 是 | `^[a-zA-Z0-9_]{4,32}$` |
   | `password` | String | 是 | 长度 6~32 位 |
   | `realName` | String | 是 | 长度 2~32 位 |
-  | `roleType` | String | 是 | 仅允许 `STUDENT` 或 `TEACHER` |
   | `deptClass`| String | 是 | 所属院系班级 |
   | `email` | String | 否 | 合法邮箱格式 |
+
+公开注册只创建 `STUDENT`。请求体中的 `roleType` 会被拒绝。教师与管理员由 `PUT /api/v1/admin/users/{id}` 分配。
 - **响应示例**：
   ```json
   { "code": 200, "message": "注册成功", "data": { "userId": 7, "username": "stu_001" }, "timestamp": 1761826800000 }
@@ -161,7 +162,7 @@
     "apiKeyPlain": "",
     "modelName": "deepseek-chat",
     "enableMockFallback": true,
-    "sensitiveWords": ["drop table", "delete from sys_user", "rm -rf", "违法违禁"]
+    "sensitiveWords": ["违法违禁"]
   }
   ```
 

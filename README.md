@@ -31,7 +31,7 @@ FlowMind 面向高校人工智能与软件工程实践教学，将工作流拖�
 | 节点类型 | 用途 |
 | --- | --- |
 | `INPUT` | 接收运行输入、合并默认变量 |
-| `KNOWLEDGE` | 从内置知识库检索相关规范与参考文本 |
+| `KNOWLEDGE` | 从 `resources/knowledge` 下的 Markdown 检索段落，输出带文件名 |
 | `CODE` | 执行预定义的安全文本处理、提取及格式转换规则 |
 | `CONDITION` | 根据条件选择执行分支 |
 | `LLM` | 调用大模型或本地流式沙箱，生成处理结果 |
@@ -183,14 +183,46 @@ SOURCE sql/init_flowmind.sql;
 
 脚本包含数据库创建、8 张表的重建和演示数据插入。**重复执行会删除并重建同名业务表，清除已有数据，请仅在可重置的开发或演示数据库中使用。**
 
+已有数据库升级协同功能时，请执行增量脚本，保留现有工作流、作业和用户数据。在 MySQL 客户端中执行：
+
+```sql
+USE flowmind_db;
+SOURCE D:/FlowMind/sql/migrations/20261105_add_workflow_yjs.sql;
+```
+
+若仓库不在 `D:/FlowMind`，将 `SOURCE` 路径改为实际路径。此脚本只补齐缺少的 `wf_workflow.yjs_state` 和 `yjs_version`，可重复执行，已存在的协同状态不会被覆盖。若工作台、工作流列表或模板广场返回 500，且后端日志出现 `Unknown column 'yjs_state' in 'field list'`，执行该脚本后刷新页面即可，无需重建数据库。
+
 ### 7.2 后端启动
 
-通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD`、`JWT_SECRET` 环境变量配置数据库连接与 JWT 签名参数。默认数据库是本机 `flowmind_db`，用户名 `root`，密码为空；请按本机实际设置覆盖。设置 `REDIS_ENABLED=true` 可启用 Redis，连接失败会回退内存。真实密钥不提交到仓库。
+通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD`、`JWT_SECRET` 环境变量配置数据库连接与 JWT 签名参数。默认数据库是本机 `flowmind_db`，用户名 `root`，密码为空；请按本机实际设置覆盖。答辩和任何非测试启动必须先设置 `JWT_SECRET`，值至少 32 字节，且不能使用仓库里的开发默认串。测试 profile 才允许该默认串。设置 `REDIS_ENABLED=true` 可启用 Redis，连接失败会回退内存。真实密钥不提交到仓库。
+
+```powershell
+$jwtBytes = New-Object byte[] 48
+$jwtRng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$jwtRng.GetBytes($jwtBytes)
+$jwtRng.Dispose()
+$env:JWT_SECRET = [Convert]::ToBase64String($jwtBytes)
+```
+
+在同一个终端继续执行下面的启动命令。上述密钥仅保存在当前终端环境中，不会写入仓库；新开终端需要重新设置。重新生成密钥会使旧登录令牌失效。仅把变量写入 `.env.local` 不会被 Maven/Spring Boot 自动加载。
+
+如果本机 MySQL 的 `root` 账号有密码，还需要在该终端设置数据库密码。这是 MySQL 安装时设置的密码，与网页登录演示密码 `123456` 不同。PowerShell 可通过隐藏输入设置：
+
+```powershell
+$dbCredential = Get-Credential -UserName root -Message '请输入本机 MySQL 账号和密码'
+$env:DB_USERNAME = $dbCredential.UserName
+$env:DB_PASSWORD = $dbCredential.GetNetworkCredential().Password
+Remove-Variable dbCredential
+```
 
 ```shell
 cd flowmind-backend
 mvn spring-boot:run
 ```
+
+若启动失败，向上查找 `Application run failed` 后最底层的 `Caused by`。出现 `JWT_SECRET 至少 32 字节，且不能使用仓库中的开发默认值` 表示该终端尚未设置有效密钥；末尾的 `Process terminated with exit code: 1` 只是 Maven 汇总信息。
+
+服务能启动不代表数据库已连接成功。若登录提示数据库连接或查询失败，查看后端日志；`Access denied for user 'root'@'localhost' (using password: NO)` 表示未提供数据库密码。在启动终端按上面的步骤配置后，停止并重新执行 `mvn spring-boot:run`。若忘记 MySQL 密码，需要向本机数据库管理员获取或按 MySQL 官方流程重置；不要为排查登录问题重新运行会清空业务表的初始化脚本。
 
 管理员可在“模型与审计”中保存通道、Base URL、模型名称、API Key 和降级开关；保存后下一次模型调用即生效。已保存的管理员配置统一控制 LLM 通道，优先于节点和环境中的默认通道。没有保存管理员配置时，保留节点及 `flowmind.llm.*` 环境配置。未配置 Key 或选择 `MOCK_LOCAL` 时使用本地沙箱；有 Key 的远端调用失败时，仅在启用降级且尚未输出内容时回退。Key 留空表示保留已存 Key。
 
@@ -215,7 +247,7 @@ npm run dev
 
 ### 7.4 演示账号
 
-初始化脚本预置以下账号，初始密码统一为 `123456`，已通过 BCrypt 与真实登录接口验证。
+初始化脚本预置以下账号，初始密码统一为 `123456`，已通过 BCrypt 与真实登录接口验证。这组账号只用于本地演示和自动化测试。公开注册只能创建学生，教师和管理员由管理员在用户管理中指定。
 
 | 角色 | 用户名 | 显示姓名 |
 | --- | --- | --- |

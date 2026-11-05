@@ -20,7 +20,7 @@
 | **TC-SYS-01** | BCrypt 密码编码器加密验证 | 数据库已初始化 | 调用 `POST /api/v1/auth/register` 注册账号 `test_stu_01`，密码 `Pass123456` | 返回 `code: 200`；查询 `sys_user.password_hash` 字段以 `$2a$10$` 开头，且 `matches("Pass123456", hash) == true` | FR-401 |
 | **TC-SYS-02** | 安全退出与 Token 黑名单拦截 | 用户已登录并获得有效 JWT | 1. 携带 JWT 调用 `GET /api/v1/auth/me`；<br>2. 调用 `POST /api/v1/auth/logout`；<br>3. 再次携带同一 JWT 调用 `GET /api/v1/auth/me` | 第1步返回 `200`；第2步返回 `200` 且 `sys_model_audit_log` 新增 `LOGOUT` 记录；第3步被 `JwtAuthenticationFilter` 拦截，返回 HTTP 401 及 `code: 40102` | FR-401 |
 | **TC-SYS-03** | RBAC 角色越权拦截测试 | 使用 `STUDENT` 角色账号登录 | 携带学生 JWT 请求管理员接口 `GET /api/v1/admin/users` 或教师接口 `POST /api/v1/edu/tasks` | 后端返回 HTTP 403 及 `code: 40300`（"权限不足，无法访问该资源"）；前端自动跳转 `Error403View.vue` | FR-402 |
-| **TC-SYS-04** | 敏感词与 XSS 过滤器拦截测试 | 任意已登录用户 | 发送 `POST /api/v1/engine/text-to-flow`，请求体包含 `"prompt": "帮我执行 drop table sys_user"` | 被 `SensitiveAndXssFilter` 拦截，返回 HTTP 400 及 `code: 40009`；查询 `sys_model_audit_log` 存在 `action_type = 'SENSITIVE_BLOCK'` 记录 | FR-403 |
+| **TC-SYS-04** | 敏感词与 XSS 过滤器拦截测试 | 任意已登录用户 | 发送 `POST /api/v1/engine/text-to-flow`，请求体包含默认敏感词 `违法违禁`；另发一条简介含 `drop table` 的保存请求 | 前者被 `SensitiveAndXssFilter` 拦截，返回 HTTP 400 及 `code: 40009`，`sys_model_audit_log` 存在 `action_type = 'SENSITIVE_BLOCK'`；后者保存成功 | FR-403 |
 | **TC-SYS-05** | 全局异常处理器统一格式验证 | 任意已登录用户 | 请求不存在的工作流 `GET /api/v1/workflows/999999` 或传入非法空参 `@Valid` | `GlobalExceptionHandler` 捕获并返回标准 JSON `{code: 40004/40000, message: "...", data: null, timestamp: ...}`，不暴露原始堆栈给前端 | 全局异常 |
 
 ---

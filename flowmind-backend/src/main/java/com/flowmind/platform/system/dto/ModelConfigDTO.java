@@ -10,5 +10,5 @@ public class ModelConfigDTO {
     @Size(max = 512) private String apiKeyPlain = "";
     @NotBlank @Size(max = 128) private String modelName = "deepseek-chat";
     @NotNull private Boolean enableMockFallback = true;
-    @NotNull @Size(max = 200) private List<@NotBlank @Size(max = 100) String> sensitiveWords = List.of("drop table", "delete from sys_user", "rm -rf", "违法违禁");
+    @NotNull @Size(max = 200) private List<@NotBlank @Size(max = 100) String> sensitiveWords = List.of("违法违禁");
 }

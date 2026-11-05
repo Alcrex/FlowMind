@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import * as echarts from 'echarts'
+type Chart = import('echarts/core').EChartsType
 import { eduApi, type EduAnalytics } from '@/api/eduApi'
 import './edu.css'
 const route = useRoute(), filters = reactive<{taskId?: number; targetClass?: string}>({}), data = ref<EduAnalytics>(), loading = ref(false), error = ref('')
 const scores = ref<HTMLDivElement>(), radar = ref<HTMLDivElement>(), trend = ref<HTMLDivElement>(), errors = ref<HTMLDivElement>()
-let charts: echarts.ECharts[] = [], observer: ResizeObserver | undefined, version = 0
+let charts: Chart[] = [], observer: ResizeObserver | undefined, version = 0
 function dispose() { observer?.disconnect(); charts.forEach(c => c.dispose()); charts = [] }
-function render() {
+async function render() {
   dispose(); const d = data.value
   if (!d || !scores.value || !radar.value || !trend.value || !errors.value) return
+  const echarts = await import('@/utils/chartCore')
   charts = [scores.value, radar.value, trend.value, errors.value].map(el => echarts.init(el))
   const color = ['#368c73','#6c83bc','#d1a35a','#a57b98','#a1bfad']
   charts[0].setOption({ color, tooltip: { trigger: 'axis' }, grid: { left: 55, right: 20, bottom: 85 }, xAxis: { type: 'category', data: d.scoreBuckets.map(b => b.bucket), axisLabel: { interval: 0, rotate: 20 } }, yAxis: { type: 'value', minInterval: 1 }, series: [{ type: 'bar', data: d.scoreBuckets.map(b => b.count), barMaxWidth: 45 }] })
@@ -22,7 +23,7 @@ function render() {
 }
 async function load() {
   const requestVersion = ++version; loading.value = true; error.value = ''
-  try { const result = await eduApi.analytics(filters); if (requestVersion !== version) return; data.value = result; await nextTick(); render() }
+  try { const result = await eduApi.analytics(filters); if (requestVersion !== version) return; data.value = result; await nextTick(); await render() }
   catch { if (requestVersion === version) { data.value = undefined; dispose(); error.value = '统计数据加载失败，请重试' } }
   finally { if (requestVersion === version) loading.value = false }
 }

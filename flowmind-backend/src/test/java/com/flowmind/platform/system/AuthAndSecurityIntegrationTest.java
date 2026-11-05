@@ -16,6 +16,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.*;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.env.MockEnvironment;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.*;
@@ -58,7 +59,7 @@ class AuthAndSecurityIntegrationTest {
     MockHttpServletRequestBuilder payload(MockHttpServletRequestBuilder request, Object value) throws Exception {
         return request.contentType("application/json").content(json.writeValueAsString(value));
     }
-    Map<String, Object> registration(String username) { return Map.of("username", username, "password", "Pass123456", "realName", "测试学生", "roleType", "STUDENT", "deptClass", "计科1班", "email", "test@example.com"); }
+    Map<String, Object> registration(String username) { return Map.of("username", username, "password", "Pass123456", "realName", "测试学生", "deptClass", "计科1班", "email", "test@example.com"); }
 
     @Test void registrationBcryptLoginAndSafeLogout() throws Exception {
         String name = "test_" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
@@ -66,6 +67,7 @@ class AuthAndSecurityIntegrationTest {
         call(payload(post("/api/v1/auth/register"), input), null);
         String hash = jdbc.queryForObject("SELECT password_hash FROM sys_user WHERE username = ?", String.class, name);
         assertThat(hash).startsWith("$2a$10$"); assertThat(encoder.matches("Pass123456", hash)).isTrue();
+        assertThat(jdbc.queryForObject("SELECT role_type FROM sys_user WHERE username = ?", String.class, name)).isEqualTo("STUDENT");
         mvc.perform(payload(post("/api/v1/auth/register"), input)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value(40001));
         var login = call(payload(post("/api/v1/auth/login"), Map.of("username", name, "password", "Pass123456")), null).path("data");
         String token = login.path("token").asText();
@@ -82,9 +84,12 @@ class AuthAndSecurityIntegrationTest {
     }
 
     @Test void invalidRegistrationNeverCreatesAdmin() throws Exception {
+        var teacher = new HashMap<>(registration("self_teacher")); teacher.put("roleType", "TEACHER");
+        mvc.perform(payload(post("/api/v1/auth/register"), teacher)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value(40000));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sys_user WHERE username = 'self_teacher'", Integer.class)).isZero();
         var input = new HashMap<>(registration("invalid_admin")); input.put("roleType", "ADMIN");
         mvc.perform(payload(post("/api/v1/auth/register"), input)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value(40000));
-        input.put("roleType", "STUDENT"); input.put("password", "123");
+        input.remove("roleType"); input.put("password", "123");
         mvc.perform(payload(post("/api/v1/auth/register"), input)).andExpect(status().isBadRequest());
         mvc.perform(post("/api/v1/auth/login").contentType("application/json").content("{" )).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value(40000));
     }
@@ -114,13 +119,13 @@ class AuthAndSecurityIntegrationTest {
     @Test void malformedExpiredAndForgedTokens() throws Exception {
         String expired = Jwts.builder().subject("6").id(UUID.randomUUID().toString()).expiration(new Date(System.currentTimeMillis() - 10000))
             .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8))).compact();
-        String forged = new JwtUtil("different-secret-with-at-least-thirty-two-characters", 10000).generateToken(6L, "lijunhao", "李俊豪", "ADMIN");
+        String forged = new JwtUtil("different-secret-with-at-least-thirty-two-characters", 10000, new MockEnvironment()).generateToken(6L, "lijunhao", "李俊豪", "ADMIN");
         for (String token : List.of("invalid", expired, forged)) mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token))
             .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value(40100));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"帮我执行 DROP   TABLE sys_user", "<script>alert(1)</script>", "<img src=x onerror=alert(1)>", "javascript:alert(1)", "违法违禁"})
+    @ValueSource(strings = {"<script>alert(1)</script>", "<img src=x onerror=alert(1)>", "javascript:alert(1)", "违法违禁"})
     void sensitiveWordsAndXssAreAudited(String prompt) throws Exception {
         mvc.perform(payload(post("/api/v1/engine/text-to-flow"), Map.of("prompt", prompt)).header("Authorization", "Bearer " + student))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value(40009));
@@ -129,8 +134,9 @@ class AuthAndSecurityIntegrationTest {
 
     @Test void escapedJsonAndQueryCannotBypassFilterAndCleanJsonIsReplayed() throws Exception {
         mvc.perform(post("/api/v1/engine/text-to-flow").header("Authorization", "Bearer " + student).contentType("application/json")
-            .content("{\"prompt\":\"\\u0064rop table sys_user\"}")).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value(40009));
-        mvc.perform(get("/api/v1/admin/users").param("keyword", "drop table").header("Authorization", "Bearer " + admin)).andExpect(status().isBadRequest());
+            .content("{\"prompt\":\"\\u8fdd\\u6cd5\\u8fdd\\u7981绕过检测\"}")).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value(40009));
+        call(payload(post("/api/v1/engine/text-to-flow"), Map.of("prompt", "演示 drop table 的注入风险", "category", "CODE_ASSIST")), student);
+        mvc.perform(get("/api/v1/admin/users").param("keyword", "违法违禁").header("Authorization", "Bearer " + admin)).andExpect(status().isBadRequest());
         call(payload(post("/api/v1/auth/login"), Map.of("username", "admin", "password", "123456")), null);
     }
 
@@ -166,7 +172,7 @@ class AuthAndSecurityIntegrationTest {
 
     @Test void configurationPersistsRedactsKeyAndUpdatesFilterRules() throws Exception {
         var config = new ModelConfigDTO(); config.setActiveProvider("DEEPSEEK"); config.setApiKeyPlain("sk-secret-test-89ab");
-        config.setSensitiveWords(List.of("drop table", "new-blocked-phrase"));
+        config.setSensitiveWords(List.of("new-blocked-phrase"));
         var response = call(payload(put("/api/v1/admin/models/config"), config), admin);
         assertThat(response.toString()).doesNotContain("sk-secret-test");
         assertThat(response.path("data").path("apiKeyMasked").asText()).isEqualTo("sk-****89ab");

@@ -2,13 +2,13 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, ArrowRight, Connection, User, Reading, Lightning } from '@element-plus/icons-vue'
-import * as echarts from 'echarts'
+type Chart = import('echarts/core').EChartsType
 import { workflowApi } from '@/api/workflowApi'
 import { categoryLabel, formatTime, type Dashboard } from '@/api/types'
 import { useAuthStore } from '@/stores/authStore'
 const auth = useAuthStore(), router = useRouter()
 const data = ref<Dashboard>(), loading = ref(false), failed = ref(false), chartEl = ref<HTMLElement>()
-let chart: echarts.ECharts | undefined, observer: ResizeObserver | undefined
+let chart: Chart | undefined, observer: ResizeObserver | undefined
 const metrics = computed(() => [
   { label: '我的工作流', value: data.value?.myWorkflowCount, icon: Connection, tone: 'green', caption: '从想法到可执行的工作流' },
   { label: '协作工作流', value: data.value?.collabWorkflowCount, icon: User, tone: 'purple', caption: '与小组成员共同创作' },
@@ -20,7 +20,7 @@ async function load() {
   try {
     data.value = await workflowApi.dashboard()
     if (chartEl.value) {
-      chart ??= echarts.init(chartEl.value)
+      chart ??= (await import('@/utils/chartCore')).initPie(chartEl.value)
       const counts = new Map<string, number>()
       data.value.recentWorkflows.forEach(w => counts.set(categoryLabel(w.category), (counts.get(categoryLabel(w.category)) ?? 0) + 1))
       chart.setOption({ animation: false, color: ['#347f67', '#9dbdab', '#c8b682', '#8c87b2', '#7da2bd'], tooltip: { trigger: 'item' }, legend: { bottom: 0, icon: 'circle', textStyle: { color: '#68766e' } }, series: [{ type: 'pie', radius: ['53%', '73%'], center: ['50%', '43%'], label: { show: false }, itemStyle: { borderWidth: 4, borderColor: '#fff', borderRadius: 6 }, data: [...counts].map(([name, value]) => ({ name, value })) }] })

@@ -107,7 +107,7 @@ graph TD
 1. **`CorsFilter` (Order = 1)**：设置 `Access-Control-Allow-Origin`、`Access-Control-Allow-Headers` (`Authorization, Content-Type`)，对 `OPTIONS` 预检请求直接返回 200。
 2. **`SensitiveAndXssFilter` (Order = 2)**：使用 `ContentCachingRequestWrapper` 包装 `application/json` 请求体，执行两项检查：
    - XSS 恶意脚本标签检测（如 `<script>`、`javascript:`）；
-   - 违规敏感词匹配（读取 `SysModelConfigService` 维护的敏感词集合，默认内置 `["drop table", "delete from sys_user", "rm -rf", "赌博", "诈骗"]`）。
+   - 违规敏感词匹配（读取 `SysAuditAndConfigService` 维护的敏感词集合，默认只有 `违法违禁`。英文和数字按整词匹配，中文按包含匹配。`drop table` 这类技术讨论不再作为默认词）。
    - 若命中则直接通过 `HttpServletResponse` 输出 HTTP 400 及标准 JSON `{ "code": 40009, "message": "请求包含违规敏感词或恶意脚本，已被安全过滤器拦截" }`，并异步写入 `sys_model_audit_log` (`action_type = 'SENSITIVE_BLOCK'`)。
 3. **`JwtAuthenticationFilter` (Order = 3)**：
    - 白名单路径（`/api/v1/auth/login`, `/api/v1/auth/register`, `/api/v1/market/templates/**` 只读列表, `/ws/**`, `/doc.html`, `/v3/api-docs/**`）直接放行。
@@ -125,7 +125,7 @@ graph TD
   - `GRAPH_DELTA`：当成员拖拽移动节点、修改节点配置或增删连线时，广播变更增量（或 Yjs 更新向量），同房间其余客户端实时应用更新，实现毫秒级同屏协作。
 
 ### 4.3 DAG 拓扑执行与 SSE 流式推送架构（张誉诚负责）
-- **通信协议**：采用基于 `SseEmitter`（超时时间 120,000ms）的标准 SSE 协议，接口为 `POST /api/v1/engine/execute/stream`（配合 `@microsoft/fetch-event-source` 支持携带 `Authorization` 请求头和 JSON Body）。
+- **通信协议**：采用基于 `SseEmitter`（超时时间 120,000ms）的标准 SSE 协议，接口为 `POST /api/v1/engine/execute/stream`。前端 `src/utils/sseClient.ts` 携带 `Authorization` 请求头和 JSON Body。
 - **推送事件类型（Event Types）**：
   1. `event: WORKFLOW_START` $\rightarrow$ 返回 `{ execNo, execRecordId, totalSteps }`
   2. `event: NODE_START` $\rightarrow$ 返回 `{ nodeKey, nodeName, nodeType, stepOrder }`（前端画布将该节点边框设为脉冲流光蓝色）

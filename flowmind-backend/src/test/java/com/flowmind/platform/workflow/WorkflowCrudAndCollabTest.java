@@ -169,6 +169,14 @@ class WorkflowCrudAndCollabTest {
             assertThat(c.messages.poll(150, TimeUnit.MILLISECONDS)).isNull();
             sa.sendMessage(new TextMessage("{\"type\":\"GRAPH_DELTA\",\"payload\":{\"nodeKey\":\"INPUT\",\"position\":{\"x\":500,\"y\":300}}}"));
             assertThat(b.await("GRAPH_DELTA")).contains("500");
+            sa.sendMessage(new TextMessage("{\"type\":\"YJS_STATE\",\"payload\":{\"update\":\"AQID\"}}"));
+            Long version = 0L; long until = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (System.nanoTime() < until && version == 0L) {
+                version = jdbc.queryForObject("SELECT yjs_version FROM wf_workflow WHERE id=?", Long.class, id);
+                if (version == 0L) Thread.sleep(100);
+            }
+            assertThat(version).isEqualTo(1L);
+            assertThat(jdbc.queryForObject("SELECT yjs_state FROM wf_workflow WHERE id=?", byte[].class, id)).containsExactly(1, 2, 3);
             assertThatThrownBy(() -> client.execute(new Inbox(), base + id + "?token=" + outsider).get(5, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class);
             cache.blacklistToken(jwt.parseToken(member).getId(), 60000);
             sb.sendMessage(new TextMessage("{\"type\":\"CURSOR_MOVE\",\"payload\":{\"x\":1,\"y\":2}}"));
