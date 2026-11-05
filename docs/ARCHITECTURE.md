@@ -41,7 +41,8 @@ flowchart TD
 
     subgraph Storage["数据持久与外部依赖层"]
         MySQL[("MySQL 8.0\n8张业务表 (3对主从表)")]
-        Redis[("Redis 7.x / 内存降级缓存\nJWT黑名单 / 在线协同房间状态")]
+        Redis[("Redis 7.x / 内存降级缓存\nJWT黑名单")]
+        Rooms["单个后端进程的协同房间\n在线连接 / 光标 / 增量广播"]
         LLM["外部大模型 API\n(DeepSeek / Qwen / 内置流式沙箱)"]
     end
 
@@ -50,7 +51,8 @@ flowchart TD
     Backend -.-> ExHandler
     Backend -.-> AuditAop
     Mod_Sys & Mod_Wf & Mod_Eng & Mod_Edu --> MySQL
-    Mod_Sys & Mod_Wf --> Redis
+    Mod_Sys --> Redis
+    Mod_Wf --> Rooms
     Mod_Eng --> LLM
 ```
 
@@ -116,6 +118,7 @@ graph TD
    - 构造 `LoginUser` 注入 `SecurityContextHolder`，供后续 `@PreAuthorize("hasRole('ADMIN')")` 等注解鉴权。
 
 ### 4.2 WebSocket + Yjs 多人实时同屏协同架构（顾峰鸣负责）
+- **部署边界**：只支持单个后端进程；所有演示窗口连接同一实例。Yjs 全量状态约每 2 秒写入 MySQL，正常关闭页面会尝试刷新；异常崩溃可能丢失约 2 秒尚未发送的修改，网络或落库失败时不能保证该上界。Redis 当前不承担房间同步，多实例部署尚未实现。
 - **端点地址**：`ws://localhost:8080/ws/collab/{workflowId}?token={jwt}`
 - **房间管理**：后端 `CollabWebSocketHandler` 维护 `ConcurrentHashMap<Long, Map<Long, WebSocketSession>>`，以 `workflowId` 为房间号（Room），以 `userId` 为成员键。
 - **每位成员专属光标颜色分配**：根据 `userId % 6` 自动分配高对比度科研配色（`#3B82F6` 蓝、`#10B981` 绿、`#F59E0B` 橙、`#EC4899` 粉、`#8B5CF6` 紫、`#EF4444` 红）。

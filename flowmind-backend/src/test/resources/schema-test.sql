@@ -77,8 +77,8 @@ CREATE TABLE `wf_workflow` (
   `like_count` INT NOT NULL DEFAULT 0 COMMENT '点赞热度',
   `version_tag` VARCHAR(32) NOT NULL DEFAULT 'v1.0.0' COMMENT '当前版本号',
   `history_snapshots_json` LONGTEXT DEFAULT NULL COMMENT '历史版本快照JSON数组',
-  `yjs_state` BLOB DEFAULT NULL,
-  `yjs_version` BIGINT NOT NULL DEFAULT 0,
+  `yjs_state` MEDIUMBLOB DEFAULT NULL COMMENT '当前画布的 Yjs 全量状态',
+  `yjs_version` BIGINT NOT NULL DEFAULT 0 COMMENT '协同状态版本，每次覆盖加一',
   `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态: 1正常 0删除',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -249,7 +249,7 @@ INSERT INTO `sys_model_audit_log` (`user_id`, `username`, `module_name`, `action
 (1, 'admin', 'ADMIN', 'MODEL_CONFIG', 'DEEPSEEK', '/api/v1/admin/models/config', 'PUT', '127.0.0.1', 200, 0, 25, '{"provider": "DEEPSEEK", "baseUrl": "https://api.deepseek.com/v1", "fallbackMode": "MOCK_LOCAL"}', NULL),
 (3, 'gufengming', 'AUTH', 'LOGIN', NULL, '/api/v1/auth/login', 'POST', '127.0.0.1', 200, 0, 45, '{"roleType": "STUDENT"}', NULL),
 (3, 'gufengming', 'ENGINE', 'EXEC_AI', 'DEEPSEEK', '/api/v1/engine/execute/stream', 'POST', '127.0.0.1', 200, 486, 1420, '{"workflowId": 1, "execNo": "EXEC-20261030-0001"}', NULL),
-(4, 'zhangyucheng', 'ENGINE', 'SENSITIVE_BLOCK', NULL, '/api/v1/engine/text-to-flow', 'POST', '127.0.0.1', 400, 0, 8, '{"blockedWord": "drop table"}', '请求包含违规敏感词 [drop table]，已被 SensitiveAndXssFilter 安全过滤器拦截');
+(4, 'zhangyucheng', 'ENGINE', 'SENSITIVE_BLOCK', NULL, '/api/v1/engine/text-to-flow', 'POST', '127.0.0.1', 400, 0, 8, '{"blockedWord": "违法违禁"}', '请求包含违规敏感词 [违法违禁]，已被 SensitiveAndXssFilter 安全过滤器拦截');
 
 SET REFERENTIAL_INTEGRITY TRUE;
 

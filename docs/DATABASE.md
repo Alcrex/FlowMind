@@ -82,6 +82,8 @@ erDiagram
         int like_count
         varchar version_tag
         json history_snapshots_json
+        mediumblob yjs_state
+        bigint yjs_version
         tinyint status
         datetime created_at
         datetime updated_at
@@ -560,13 +562,11 @@ INSERT INTO `sys_user` (`id`, `username`, `password_hash`, `real_name`, `role_ty
 (5, 'haotangxin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '郝唐鑫', 'STUDENT', '计科1班', 'haotx@flowmind.edu.cn', 48100, 1900, 1),
 (6, 'lijunhao', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '李俊豪', 'STUDENT', '计科1班', 'lijh@flowmind.edu.cn', 49000, 1000, 1);
 
--- 预置一条示范工作流主表记录 (顾峰鸣创建，全组4人协同，公开在模板广场)
 INSERT INTO `wf_workflow` (`id`, `wf_code`, `wf_name`, `description`, `category`, `tags`, `creator_id`, `collaborator_ids`, `is_public`, `node_count`, `edge_count`, `fork_count`, `like_count`, `version_tag`, `status`) VALUES
 (1, 'WF-20261030-001', 'Java代码安全缺陷智能审计与修复工作流', '自动接收学生提交的Java代码片段，先检索阿里巴巴Java开发手册知识库，再通过大模型定位SQL注入与空指针缺陷并生成修复代码。', 'CODE_ASSIST', 'Java,代码评审,安全审计,RAG', 3, '[3, 4, 5, 6]', 1, 4, 3, 18, 42, 'v1.2.0', 1);
 
--- 预置示范工作流的从表节点与连线 (4个节点 + 3条连线)
 INSERT INTO `wf_node_edge` (`workflow_id`, `element_key`, `element_type`, `node_type`, `label_name`, `source_key`, `target_key`, `source_handle`, `position_json`, `config_json`) VALUES
-(1, 'node_input_1', 'NODE', 'INPUT', 'Java源码输入', NULL, NULL, 'default', '{"x": 80, "y": 200}', '{"variables": [{"name": "codeSnippet", "type": "string", "required": true, "defaultValue": "public void query(String id) { stmt.execute(\"SELECT * FROM user WHERE id=\" + id); }"}]}'),
+(1, 'node_input_1', 'NODE', 'INPUT', 'Java源码输入', NULL, NULL, 'default', '{"x": 80, "y": 200}', '{"variables": [{"name": "codeSnippet", "type": "string", "required": true, "defaultValue": "public void query(String id) { stmt.execute(\\"SELECT * FROM user WHERE id=\\" + id); }"}]}'),
 (1, 'node_know_1', 'NODE', 'KNOWLEDGE', '阿里Java规约知识检索', NULL, NULL, 'default', '{"x": 360, "y": 200}', '{"topK": 3, "knowledgeBase": "ALI_JAVA_SPEC", "queryTemplate": "{{node_input_1.codeSnippet}}"}'),
 (1, 'node_llm_1', 'NODE', 'LLM', 'DeepSeek代码缺陷分析器', NULL, NULL, 'default', '{"x": 660, "y": 200}', '{"model": "DEEPSEEK", "temperature": 0.2, "systemPrompt": "你是一名资深Java架构师，请结合规约指出代码漏洞并给出修复后代码。", "userPromptTemplate": "规约参考：{{node_know_1.output}}\\n待审代码：{{node_input_1.codeSnippet}}"}'),
 (1, 'node_output_1', 'NODE', 'OUTPUT', '审计报告输出', NULL, NULL, 'default', '{"x": 960, "y": 200}', '{"outputFormat": "MARKDOWN", "resultTemplate": "{{node_llm_1.output}}"}'),
@@ -574,7 +574,6 @@ INSERT INTO `wf_node_edge` (`workflow_id`, `element_key`, `element_type`, `node_
 (1, 'edge_2_3', 'EDGE', NULL, '规约增强', 'node_know_1', 'node_llm_1', 'default', NULL, '{}'),
 (1, 'edge_3_4', 'EDGE', NULL, '生成报告', 'node_llm_1', 'node_output_1', 'default', NULL, '{}');
 
--- 预置示范运行主从记录
 INSERT INTO `wf_exec_record` (`id`, `exec_no`, `workflow_id`, `trigger_user_id`, `trigger_mode`, `exec_status`, `total_tokens`, `duration_ms`, `input_payload`, `final_output`, `started_at`, `finished_at`) VALUES
 (1, 'EXEC-20261030-0001', 1, 3, 'SANDBOX', 'SUCCESS', 486, 1420, '{"codeSnippet": "stmt.execute(\\"SELECT * FROM user WHERE id=\\" + id);"}', '{"report": "检测到严重SQL注入漏洞，建议使用PreparedStatement参数化查询。"}', NOW(), NOW());
 
@@ -584,19 +583,17 @@ INSERT INTO `wf_exec_node_log` (`exec_record_id`, `step_order`, `node_key`, `nod
 (1, 3, 'node_llm_1', 'DeepSeek代码缺陷分析器', 'LLM', 'SUCCESS', 422, 1190, 'System+User Prompt组装完成', '### 审计结论\n1. **风险等级**：高危（SQL注入）\n2. **修复方案**：改用 `PreparedStatement` 绑定 `?` 占位符。'),
 (1, 4, 'node_output_1', '审计报告输出', 'OUTPUT', 'SUCCESS', 0, 38, '汇总 node_llm_1 输出', '检测到严重SQL注入漏洞，建议使用PreparedStatement参数化查询。');
 
--- 预置实训课程任务主从记录
 INSERT INTO `edu_task` (`id`, `task_code`, `task_title`, `course_name`, `teacher_id`, `target_class`, `task_requirement`, `required_nodes_json`, `rubric_json`, `deadline`, `task_status`) VALUES
 (1, 'TASK-2026-001', '实训一：构建支持知识增强(RAG)的智能代码评审工作流', 'Web应用综合实训', 2, '计科1班', '要求4人小组协同搭建一个不少于4个节点的AI工作流，必须包含输入节点、知识检索节点、大模型节点与输出节点，并附上完整测试运行记录与不少于100字的实训总结报告。', '{"minNodes": 4, "mustInclude": ["INPUT", "KNOWLEDGE", "LLM", "OUTPUT"]}', '[{"item": "拓扑完整性与节点规范", "maxScore": 30}, {"item": "Prompt工程与知识库结合度", "maxScore": 40}, {"item": "沙箱运行效果与实验报告", "maxScore": 30}]', DATE_ADD(NOW(), INTERVAL 14 DAY), 1);
 
 INSERT INTO `edu_submission` (`id`, `task_id`, `student_id`, `workflow_id`, `version_tag`, `canvas_snapshot_json`, `student_report`, `is_late`, `auto_check_passed`, `rubric_detail_json`, `score`, `teacher_comment`, `review_status`, `submitted_at`, `reviewed_at`) VALUES
 (1, 1, 3, 1, 'v1.2.0', '{"nodes": [{"elementKey": "node_input_1", "nodeType": "INPUT"}, {"elementKey": "node_know_1", "nodeType": "KNOWLEDGE"}, {"elementKey": "node_llm_1", "nodeType": "LLM"}, {"elementKey": "node_output_1", "nodeType": "OUTPUT"}], "edges": [{"sourceKey": "node_input_1", "targetKey": "node_know_1"}, {"sourceKey": "node_know_1", "targetKey": "node_llm_1"}, {"sourceKey": "node_llm_1", "targetKey": "node_output_1"}]}', '本小组通过Yjs同屏协同完成了Java代码安全缺陷智能审计工作流，结合阿里规约知识库与DeepSeek模型，有效降低了大模型幻觉，测试准确率达95%以上。', 0, 1, '{"拓扑完整性与节点规范": 29, "Prompt工程与知识库结合度": 38, "沙箱运行效果与实验报告": 28}', 95.00, '工作流拓扑清晰，知识检索节点与LLM提示词变量绑定非常规范，多人协同完成度极高！', 1, NOW(), NOW());
 
--- 预置模型通道配置与安全审计日志
 INSERT INTO `sys_model_audit_log` (`user_id`, `username`, `module_name`, `action_type`, `model_provider`, `request_uri`, `request_method`, `request_ip`, `http_status`, `cost_tokens`, `duration_ms`, `detail_json`, `error_msg`) VALUES
 (1, 'admin', 'ADMIN', 'MODEL_CONFIG', 'DEEPSEEK', '/api/v1/admin/models/config', 'PUT', '127.0.0.1', 200, 0, 25, '{"provider": "DEEPSEEK", "baseUrl": "https://api.deepseek.com/v1", "fallbackMode": "MOCK_LOCAL"}', NULL),
 (3, 'gufengming', 'AUTH', 'LOGIN', NULL, '/api/v1/auth/login', 'POST', '127.0.0.1', 200, 0, 45, '{"roleType": "STUDENT"}', NULL),
 (3, 'gufengming', 'ENGINE', 'EXEC_AI', 'DEEPSEEK', '/api/v1/engine/execute/stream', 'POST', '127.0.0.1', 200, 486, 1420, '{"workflowId": 1, "execNo": "EXEC-20261030-0001"}', NULL),
-(4, 'zhangyucheng', 'ENGINE', 'SENSITIVE_BLOCK', NULL, '/api/v1/engine/text-to-flow', 'POST', '127.0.0.1', 400, 0, 8, '{"blockedWord": "drop table"}', '请求包含违规敏感词 [drop table]，已被 SensitiveAndXssFilter 安全过滤器拦截');
+(4, 'zhangyucheng', 'ENGINE', 'SENSITIVE_BLOCK', NULL, '/api/v1/engine/text-to-flow', 'POST', '127.0.0.1', 400, 0, 8, '{"blockedWord": "违法违禁"}', '请求包含违规敏感词 [违法违禁]，已被 SensitiveAndXssFilter 安全过滤器拦截');
 
 SET FOREIGN_KEY_CHECKS = 1;
 ```

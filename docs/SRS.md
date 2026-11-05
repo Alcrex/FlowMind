@@ -30,15 +30,15 @@
 
 ### 3.1 子系统四（先行基础层）：RBAC 权限治理、算力管控与全局监控大屏（负责人：李俊豪）
 
-#### FR-401：多角色注册、登录与安全退出
+#### FR-401：学生注册、多角色登录与安全退出
 - **关联视图**：`VIEW-01 LoginView.vue`, `VIEW-02 RegisterView.vue`, `VIEW-03 Error403View.vue`
 - **输入**：
-  - 注册：`username` (4~32位字母数字下划线), `password` (6~32位), `realName` (2~32位), `roleType` (`STUDENT` 或 `TEACHER`), `deptClass`, `email`。
+  - 注册：`username` (4~32位字母数字下划线), `password` (6~32位), `realName` (2~32位), `deptClass`, `email`。公开注册不接受 `roleType`，多传该字段返回 HTTP 400（`40000`）。
   - 登录：`username`, `password`。
 - **处理流程**：
-  1. 注册时校验 `username` 唯一性，使用 `BCryptPasswordEncoder` 加密密码，学生初始赠送 `token_quota = 50000`，教师赠送 `token_quota = 200000`。
-  2. 登录时验证账号密码及 `status == 1`（未被封禁），生成包含 `userId`、`username`、`roleType`、`jti` 的 JWT Token（有效期 24 小时），更新 `last_login_at` 并写入 `sys_model_audit_log` (`action_type = 'LOGIN'`)。
-  3. 安全退出时，解析请求头 `Authorization: Bearer <token>` 中的 `jti`，写入 Redis 黑名单 `auth:blacklist:{jti}`，并记录 `LOGOUT` 审计日志。
+  1. 注册时校验 `username` 唯一性，使用 `BCryptPasswordEncoder` 加密密码，固定创建 `STUDENT`，初始 `token_quota = 50000`。教师和管理员由管理员通过用户管理接口分配角色及额度。
+  2. 登录时验证账号密码及 `status == 1`（未被封禁），生成包含 `userId`、`username`、`roleType`、`jti` 的 JWT Token（默认有效期 2 小时，可通过配置调整），更新 `last_login_at` 并写入 `sys_model_audit_log` (`action_type = 'LOGIN'`)。
+  3. 安全退出时，解析请求头 `Authorization: Bearer <token>` 中的 `jti`，通过 `TokenCacheService` 写入 Redis 或内存黑名单，并记录 `LOGOUT` 审计日志。
 - **输出**：`{ token, tokenId, userInfo: { id, username, realName, roleType, deptClass, tokenQuota, tokenUsed } }`。
 - **异常情况**：
   - 账号已存在 $\rightarrow$ 返回业务码 `40001`（"用户名已被注册"）。
@@ -120,7 +120,7 @@
 #### FR-202：自然语言一句话生成工作流（Text-to-Flow）
 - **关联视图**：`VIEW-11 TextToFlowView.vue`
 - **输入**：`prompt`（如“帮我生成一个先检索Java规范知识库、再用大模型评审代码并输出评分报告的工作流”）、`category`。
-- **处理流程**：后端根据用户自然语言意图（调用大模型 JSON 结构化输出或内置智能模板合成器），自动生成包含 4~6 个合理节点及连线坐标的工作流主从表记录，并返回新生成的 `workflowId`，前端直接跳转进入画布预览和微调。
+- **处理流程**：当前按自然语言关键词进行规则合成，生成 3~7 个节点及连线，经拓扑校验后事务保存并返回 `WorkflowDetailVO`（`generationMode = RULE`）。前端跳转画布并标明“规则生成”。配置模型 Key 仅影响 LLM 节点执行，目前不会调用模型生成节点 JSON；模型规划属于后续扩展。
 
 #### FR-203：运行记录主从表查询与模板广场多条件检索
 - **关联视图**：`VIEW-12 ExecRecordListView.vue`, `VIEW-13 ExecNodeDetailView.vue`, `VIEW-14 TemplateMarketView.vue`, `VIEW-15 TemplateDetailView.vue`

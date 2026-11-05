@@ -340,3 +340,5 @@ cd flowmind-backend
 | [测试计划](docs/TESTING.md) | 自动化测试与端到端验收用例 |
 | [Codex 指南](docs/CODEX_GUIDE.md) | 开发批次与任务提示词模板 |
 | [最终评审](FINAL_REVIEW.md) | 默认方案、设计冲突处理与待确认事项 |
+| [本轮整改记录](docs/REMEDIATION_20261105.md) | 12项问题的处理、实测证据与剩余限制 |
+| [七步演示手册](docs/DEFENSE_RUNBOOK.md) | 现场准备、四人操作、口播边界及人工验收记录 |

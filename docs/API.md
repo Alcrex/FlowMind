@@ -72,7 +72,7 @@
   | `deptClass`| String | 是 | 所属院系班级 |
   | `email` | String | 否 | 合法邮箱格式 |
 
-公开注册只创建 `STUDENT`。请求体中的 `roleType` 会被拒绝。教师与管理员由 `PUT /api/v1/admin/users/{id}` 分配。
+公开注册只创建 `STUDENT`。请求体中的 `roleType` 会被拒绝，返回 HTTP 400、`code: 40000`。教师与管理员由 `PUT /api/v1/admin/users/{id}` 分配。
 - **响应示例**：
   ```json
   { "code": 200, "message": "注册成功", "data": { "userId": 7, "username": "stu_001" }, "timestamp": 1761826800000 }
@@ -368,6 +368,7 @@
   }
   ```
 - **响应示例**：返回新创建的 `WorkflowDetailVO`（可直接跳转 `/workflow/editor/{id}`）。
+- **生成来源**：当前 `generationMode` 固定为 `RULE`，节点由关键词规则合成（3~7 个），经拓扑校验后保存。配置模型 Key 不会启用模型生成图；Key 用于运行时的 LLM 节点。
 
 ### 4.4 运行记录主表多条件分页查询与从表明细查询
 - **主表多条件分页**：`GET /api/v1/engine/records`

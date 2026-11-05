@@ -1,0 +1,22 @@
+
+> flowmind-frontend@1.0.0 test:e2e
+> playwright test
+
+[WebServer] (node:37552) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 7 tests using 1 worker
+
+(node:31324) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:31324) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 tests\defense.spec.ts:14:1 › defense security: student-only registration, sensitive audit and revoked token (1.6s)
+  ok 2 tests\defense.spec.ts:112:1 › defense engine: three rule graphs, skipped branch, cycle refusal and fresh heatmap (4.1s)
+  ok 3 tests\platform.spec.ts:34:1 › registration, real login, RBAC, model settings, admin charts and safe logout (3.6s)
+  ok 4 tests\platform.spec.ts:129:1 › text-to-flow, standalone configuration, SSE execution, records and template fork (4.7s)
+  ok 5 tests\platform.spec.ts:232:1 › teacher publishes, student submits, frozen snapshot replays, grading and four analytics charts (5.8s)
+  ok 6 tests\workflow.spec.ts:15:1 › real workflow APIs, canvas editing, Yjs convergence, cursors, snapshots and rollback (13.3s)
+  ok 7 tests\workflow.spec.ts:261:1 › workflow list supports UI create, metadata edit, filters, clone and delete (4.4s)
+
+  7 passed (48.7s)

@@ -7,6 +7,7 @@ export default defineConfig({
   webServer: [
     { command: 'powershell -NoProfile -ExecutionPolicy Bypass -File ../flowmind-backend/scripts/start_browser_test_server.ps1',
       url: 'http://127.0.0.1:8080/api/v1/market/templates', timeout: 120000, reuseExistingServer: false },
-    { command: 'npm run dev', url: 'http://127.0.0.1:5173', reuseExistingServer: false }
+    { command: process.env.FLOWMIND_E2E_PREVIEW === 'true' ? 'npm run preview -- --host 127.0.0.1 --port 5173 --strictPort' : 'npm run dev',
+      url: 'http://127.0.0.1:5173', reuseExistingServer: false }
   ]
 })

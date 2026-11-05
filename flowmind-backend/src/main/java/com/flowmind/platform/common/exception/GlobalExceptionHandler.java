@@ -4,6 +4,7 @@ import com.flowmind.platform.common.api.*;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +34,7 @@ public class GlobalExceptionHandler {
         return response(ErrorCode.INTERNAL_ERROR, ErrorCode.INTERNAL_ERROR.getMessage());
     }
     private ResponseEntity<Result<Void>> response(ErrorCode code, String message) {
-        return ResponseEntity.status(code.getHttpStatus()).body(Result.failure(code, message));
+        // Pre-stream failures must remain JSON even when the request accepts only text/event-stream.
+        return ResponseEntity.status(code.getHttpStatus()).contentType(MediaType.APPLICATION_JSON).body(Result.failure(code, message));
     }
 }

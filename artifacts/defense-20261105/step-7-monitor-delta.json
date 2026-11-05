@@ -1,0 +1,354 @@
+{
+  "before": {
+    "kpi": {
+      "totalUsers": 7,
+      "totalWorkflows": 4,
+      "totalExecutions": 1,
+      "totalTokensUsed": 29500
+    },
+    "sankeyData": {
+      "nodes": [
+        {
+          "name": "班级 · 计科1班"
+        },
+        {
+          "name": "角色 · STUDENT"
+        },
+        {
+          "name": "模型 · DEEPSEEK"
+        }
+      ],
+      "links": [
+        {
+          "source": "班级 · 计科1班",
+          "target": "角色 · STUDENT",
+          "value": 486
+        },
+        {
+          "source": "角色 · STUDENT",
+          "target": "模型 · DEEPSEEK",
+          "value": 486
+        }
+      ]
+    },
+    "deptRanking": [
+      {
+        "deptClass": "计科1班",
+        "workflowCount": 4,
+        "execCount": 1
+      },
+      {
+        "deptClass": "人工智能与计算机学院",
+        "workflowCount": 0,
+        "execCount": 0
+      },
+      {
+        "deptClass": "计算机科学与技术系",
+        "workflowCount": 0,
+        "execCount": 0
+      }
+    ],
+    "hourlyTrend": [
+      {
+        "hour": "00:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "01:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "02:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "03:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "04:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "05:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "06:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "07:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "08:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "09:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "10:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "11:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "12:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "13:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "14:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "15:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "16:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "17:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "18:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "19:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "20:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "21:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "22:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "23:00",
+        "callCount": 1,
+        "avgLatencyMs": 1420
+      }
+    ]
+  },
+  "after": {
+    "kpi": {
+      "totalUsers": 7,
+      "totalWorkflows": 4,
+      "totalExecutions": 2,
+      "totalTokensUsed": 29872
+    },
+    "sankeyData": {
+      "nodes": [
+        {
+          "name": "班级 · 计科1班"
+        },
+        {
+          "name": "角色 · STUDENT"
+        },
+        {
+          "name": "模型 · DEEPSEEK"
+        },
+        {
+          "name": "模型 · MOCK_LOCAL"
+        }
+      ],
+      "links": [
+        {
+          "source": "班级 · 计科1班",
+          "target": "角色 · STUDENT",
+          "value": 794
+        },
+        {
+          "source": "角色 · STUDENT",
+          "target": "模型 · DEEPSEEK",
+          "value": 486
+        },
+        {
+          "source": "角色 · STUDENT",
+          "target": "模型 · MOCK_LOCAL",
+          "value": 308
+        }
+      ]
+    },
+    "deptRanking": [
+      {
+        "deptClass": "计科1班",
+        "workflowCount": 4,
+        "execCount": 2
+      },
+      {
+        "deptClass": "人工智能与计算机学院",
+        "workflowCount": 0,
+        "execCount": 0
+      },
+      {
+        "deptClass": "计算机科学与技术系",
+        "workflowCount": 0,
+        "execCount": 0
+      }
+    ],
+    "hourlyTrend": [
+      {
+        "hour": "00:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "01:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "02:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "03:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "04:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "05:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "06:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "07:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "08:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "09:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "10:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "11:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "12:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "13:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "14:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "15:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "16:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "17:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "18:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "19:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "20:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "21:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "22:00",
+        "callCount": 0,
+        "avgLatencyMs": 0
+      },
+      {
+        "hour": "23:00",
+        "callCount": 2,
+        "avgLatencyMs": 1024.5
+      }
+    ]
+  }
+}

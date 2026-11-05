@@ -18,6 +18,7 @@
 | 用例编号 | 测试项 | 前置条件 | 测试输入与操作步骤 | 预期输出结果 | 对应需求 |
 | :---: | :--- | :--- | :--- | :--- | :---: |
 | **TC-SYS-01** | BCrypt 密码编码器加密验证 | 数据库已初始化 | 调用 `POST /api/v1/auth/register` 注册账号 `test_stu_01`，密码 `Pass123456` | 返回 `code: 200`；查询 `sys_user.password_hash` 字段以 `$2a$10$` 开头，且 `matches("Pass123456", hash) == true` | FR-401 |
+| **TC-SYS-01B** | 公开注册权限边界 | 无需登录 | 正常注册并登录查询 `/auth/me`；另用新账号在注册体多带 `roleType: "TEACHER"` | 前者固定为 `STUDENT`；后者 HTTP 400、`code: 40000`，不创建教师账号 | FR-401 |
 | **TC-SYS-02** | 安全退出与 Token 黑名单拦截 | 用户已登录并获得有效 JWT | 1. 携带 JWT 调用 `GET /api/v1/auth/me`；<br>2. 调用 `POST /api/v1/auth/logout`；<br>3. 再次携带同一 JWT 调用 `GET /api/v1/auth/me` | 第1步返回 `200`；第2步返回 `200` 且 `sys_model_audit_log` 新增 `LOGOUT` 记录；第3步被 `JwtAuthenticationFilter` 拦截，返回 HTTP 401 及 `code: 40102` | FR-401 |
 | **TC-SYS-03** | RBAC 角色越权拦截测试 | 使用 `STUDENT` 角色账号登录 | 携带学生 JWT 请求管理员接口 `GET /api/v1/admin/users` 或教师接口 `POST /api/v1/edu/tasks` | 后端返回 HTTP 403 及 `code: 40300`（"权限不足，无法访问该资源"）；前端自动跳转 `Error403View.vue` | FR-402 |
 | **TC-SYS-04** | 敏感词与 XSS 过滤器拦截测试 | 任意已登录用户 | 发送 `POST /api/v1/engine/text-to-flow`，请求体包含默认敏感词 `违法违禁`；另发一条简介含 `drop table` 的保存请求 | 前者被 `SensitiveAndXssFilter` 拦截，返回 HTTP 400 及 `code: 40009`，`sys_model_audit_log` 存在 `action_type = 'SENSITIVE_BLOCK'`；后者保存成功 | FR-403 |
@@ -95,6 +96,7 @@ Playwright 自动管理 `scripts/start_browser_test_server.ps1` 和 Vite 的启�
 
 - `workflow.spec.ts`：双窗口 Yjs、光标、连线、配置、并发新增、版本回滚和列表 CRUD。
 - `platform.spec.ts`：注册校验与注册、三角色登录、越权 403、模型配置持久化、安全退出、Text-to-Flow、独立节点与协作配置、SSE 执行和日志、模板预览/点赞/Fork、教师发布课题、学生提交、原画布回滚后的快照试跑、分项评分及学生反馈。
+- `defense.spec.ts`：学生注册权限及敏感词审计、退出Token失效、三个规则生成拓扑、条件支路SKIPPED、SSE运行环路返回40005而非跳登录、执行前后监控调用增量；保留演示预演截图与不含Token的检查JSON。
 - 验证管理员 3 张、教务 4 张图表已初始化 ECharts，并核验后端真实统计接口；24 个视图由上述场景覆盖。
 
 ### 3.4 真实 MySQL 8.0 验收
@@ -111,3 +113,9 @@ cd flowmind-backend
 ### 3.5 模型配置与真实传输之间的回归
 
 `WorkflowEngineAndMarketTest` 通过管理员 HTTP 接口保存配置，再执行真实引擎。使用本机 HTTP SSE 服务断言实际目标路径、Authorization、模型名称、usage 和审计通道；同一运行实例上切换 DeepSeek/Qwen/本地通道，验证无需重启。有 Key 且禁用降级时模拟 503，必须记录 FAILED，不能悄悄改用本地结果；启用降级时允许回退，无 Key 时保留离线能力。这些测试无需付费 API Key。
+
+### 3.6 生产产物浏览器回归与现场演示
+
+执行 `npm run build` 后，在前端目录设置 `$env:FLOWMIND_E2E_PREVIEW = 'true'`，再执行 `npm run test:e2e`，即可让同一套场景访问 Vite preview 的 `dist` 产物；执行后移除该环境变量。默认仍使用 Vite 开发服务器。
+
+上述测试均不代表人工现场验收。四位成员须按 [答辩演示手册](DEFENSE_RUNBOOK.md) 依序完成七步，在同一演示机保留截图、输入、业务 ID、实际结果和签名；出现失败则停止记录“通过”，修复后重新走受影响步骤。

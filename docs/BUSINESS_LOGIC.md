@@ -84,7 +84,7 @@ public class DagTopologicalSorter {
 | 节点类型 (`node_type`) | `config_json` 关键字段 | 执行逻辑说明 | Token 消耗计算 |
 | :--- | :--- | :--- | :--- |
 | `INPUT` | `variables: [{name, type, defaultValue}]` | 校验并合并用户传入的 `inputPayload` 与默认值，写入 `runtimeContext` | `0` |
-| `KNOWLEDGE` | `knowledgeBase`, `queryTemplate`, `topK` | 对 `queryTemplate` 变量插值后，在内置专业知识库（含《阿里巴巴Java开发手册》《OWASP Web安全规范》《Spring Boot最佳实践》《Vue3工程规范》词条库）中进行 BM25/关键词相关度检索，返回 TopK 条规范文本 | 固定 `50 ~ 100` Tokens（向量/检索折算） |
+| `KNOWLEDGE` | `knowledgeBase`, `queryTemplate`, `topK` | 对 `queryTemplate` 变量插值后，在 `resources/knowledge/*.md` 中按词匹配计分并返回 TopK 段落；标题命中额外计分，输出包含来源文件名和标题。当前没有 BM25、嵌入模型或向量检索 | 固定 `64` Tokens（课程内检索配额折算，不是外部模型计费） |
 | `CODE` | `scriptLang`, `ruleType`, `expression` | 支持对输入文本执行安全的字符串清洗、正则提取、长度统计或 JSON 格式化处理 | `0` |
 | `CONDITION` | `fieldExpr`, `operator` (`CONTAINS`/`EQUALS`/`LENGTH_GT`), `targetValue` | 计算布尔结果 `true` 或 `false`，仅激活 `source_handle` 匹配该布尔值的下游连线，其余下游分支标记为 `SKIPPED` | `0` |
 | `LLM` | `model`, `temperature`, `systemPrompt`, `userPromptTemplate` | 将 `userPromptTemplate` 插值后调用 `LlmClientAdapter`，支持真实 DeepSeek/Qwen 流式 API 与本地智能流式沙箱双模输出 | 按 `(prompt.length + output.length) / 2` 估算或读取 API 返回的 `usage.total_tokens` |
@@ -103,6 +103,8 @@ public class DagTopologicalSorter {
    - 引擎根据 `systemPrompt` 和 `userPrompt` 的语义特征（如包含 `SQL`、`代码`、`漏洞`、`周报`、`测试` 等关键词），动态生成结构化的专业 Markdown 分析报告，并按每块 6~10 个字符、间隔 25ms（测试模式下间隔 1ms）流式回调 `onTokenChunk`，使前端 SSE 打字机效果与真实大模型完全一致。
 
 ### 2.2 一句话生成工作流 (Text-to-Flow) 合成算法
+当前仅实现规则生成，返回 `generationMode = RULE`。模型 Key 用于 LLM 节点执行，尚未接入模型生成节点 JSON。
+
 当用户在 `TextToFlowView.vue` 输入自然语言需求 `prompt` 时：
 1. 分析 `prompt` 中的意图关键词：
    - 若包含“知识库 / 规约 / 检索 / RAG”，自动加入 `KNOWLEDGE` 节点；
@@ -114,6 +116,8 @@ public class DagTopologicalSorter {
 ---
 
 ## 3. 多人实时同屏协同状态同步逻辑（顾峰鸣负责）
+
+协同房间只存在于单个后端进程；Yjs 全量状态约每 2 秒保存至 MySQL，正常关闭页面会尝试刷新。进程异常或网络中断可能丢失尚未成功持久化的修改。多实例房间同步尚未实现，单机演示应固定使用同一后端实例。
 
 ### 3.1 WebSocket 握手与鉴权
 客户端连接 `ws://localhost:8080/ws/collab/{workflowId}?token={jwt}` 时：

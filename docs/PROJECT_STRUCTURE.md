@@ -200,7 +200,7 @@ flowmind-frontend/
     └── views/                                              # 【24个独立视图文件 (满足 ≥20 个硬性要求)】
         ├── auth/                                           # [李俊豪负责 - 2个]
         │   ├── LoginView.vue                               # VIEW-01: 多角色统一登录页
-        │   └── RegisterView.vue                            # VIEW-02: 师生账号注册页
+        │   └── RegisterView.vue                            # VIEW-02: 学生公开注册页，教师角色由管理员分配
         ├── error/                                          # [李俊豪负责 - 1个]
         │   └── Error403View.vue                            # VIEW-03: 权限不足拦截与异常降级页
         ├── workspace/                                      # [顾峰鸣负责 - 1个]
